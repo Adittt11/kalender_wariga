@@ -5,9 +5,7 @@ import {
   UserRound,
   Sun,
   Printer,
-  Droplet,
-  Menu,
-  X
+  Droplet
 } from "lucide-react";
 
 import pura from "../assets/pura.png";
@@ -24,7 +22,7 @@ const menus = [
 export default function Sidebar({ open, onClose }) {
   return (
     <>
-      {/* Overlay Mobile */}
+      {/* Overlay mobile */}
       <div
         onClick={onClose}
         className={`fixed inset-0 z-40 bg-black/40 transition lg:hidden ${
@@ -34,37 +32,23 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 h-screen w-[280px] overflow-hidden border-r border-baliBorder bg-[#fbf6f0] transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed left-0 top-0 z-50 h-screen w-[280px] overflow-hidden border-r border-baliBorder bg-[#fbf6f0] transition-transform duration-300 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Header Sidebar */}
-        <div className="px-6 pt-7">
-          <div className="flex items-start justify-between">
-            <h1 className="text-[24px] font-bold leading-tight text-baliDark">
-              Kalender Bali
-              <br />
-              Wariga
-            </h1>
-
-            <button
-              onClick={onClose}
-              className="rounded-xl p-2 text-baliBrown lg:hidden"
-            >
-              <X size={26} />
-            </button>
-
-            <Menu
-              className="mt-2 hidden text-baliBrown lg:block"
-              size={28}
-            />
-          </div>
+        {/* Title */}
+        <div className="px-6 pt-8">
+          <h1 className="text-[24px] font-bold leading-tight text-baliDark">
+            Kalender Bali
+            <br />
+            Wariga
+          </h1>
 
           <div className="my-7 h-[1px] bg-baliBrown/80" />
         </div>
 
         {/* Menu */}
-        <nav className="px-4 space-y-3">
+        <nav className="space-y-3 px-4">
           {menus.map((menu) => {
             const Icon = menu.icon;
 
@@ -72,7 +56,9 @@ export default function Sidebar({ open, onClose }) {
               <NavLink
                 key={menu.path}
                 to={menu.path}
-                onClick={onClose}
+                onClick={() => {
+                  if (window.innerWidth < 1024) onClose();
+                }}
                 className={({ isActive }) =>
                   `flex items-center gap-4 rounded-2xl px-5 py-4 text-[14px] transition ${
                     isActive
@@ -89,11 +75,11 @@ export default function Sidebar({ open, onClose }) {
         </nav>
 
         {/* Gambar Pura */}
-        <div className="absolute bottom-0 left-0 right-0">
+        <div className="absolute bottom-0 left-0 right-0 flex justify-center">
           <img
             src={pura}
             alt="Pura Bali"
-            className="w-full object-cover opacity-90"
+            className="w-[230px] object-contain opacity-80"
           />
         </div>
       </aside>

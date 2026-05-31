@@ -1,28 +1,25 @@
 import { Menu } from "lucide-react";
 import ornamen from "../assets/ornamen.png";
 
-export default function Header({ onOpenSidebar }) {
+export default function Header({ onToggleSidebar }) {
   return (
-    <header className="flex min-h-[90px] items-center gap-4 bg-[#fbf6f0] px-4 py-4 sm:px-6 md:px-8">
-
-      {/* Tombol Menu Mobile */}
+    <header className="flex min-h-[90px] items-center gap-5 border-b border-baliBorder bg-white px-4 py-4 sm:px-6 md:px-8">
+      {/* Tombol Sidebar */}
       <button
-        onClick={onOpenSidebar}
-        className="rounded-xl border border-baliBorder p-2 text-baliBrown lg:hidden"
+        onClick={onToggleSidebar}
+        className="flex h-11 w-11 items-center justify-center rounded-xl border border-baliBorder bg-white text-baliBrown shadow-sm transition hover:bg-baliSoft"
       >
         <Menu size={24} />
       </button>
 
-      {/* Logo Ornamen */}
-      <div className="flex-shrink-0">
-        <img
-          src={ornamen}
-          alt="Ornamen Bali"
-          className="h-16 w-auto object-contain sm:h-20 md:h-24"
-        />
-      </div>
+      {/* Logo */}
+      <img
+        src={ornamen}
+        alt="Ornamen Bali"
+        className="h-16 w-auto object-contain sm:h-20 md:h-24"
+      />
 
-      {/* Teks */}
+      {/* Text */}
       <div className="min-w-0">
         <h2 className="text-xl font-semibold text-baliDark sm:text-2xl md:text-[28px]">
           Om swastyastu

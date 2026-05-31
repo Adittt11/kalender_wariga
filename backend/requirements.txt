@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+python-dotenv
+supabase
+pydantic
+psycopg2-binary
+sqlalchemy

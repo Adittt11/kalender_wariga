@@ -1,102 +1,434 @@
-import { CalendarDays, CheckSquare } from "lucide-react";
+import { useRef, useState } from "react";
+import { CalendarDays, CheckSquare, Printer } from "lucide-react";
+import { toPng } from "html-to-image";
 import DownloadCard from "../components/DownloadCard";
+import { generateCalendar } from "../services/calendarApi";
+import ornament from "../assets/ornamen.png";
+
+const initialStartDate = "1900-01-01";
+const initialEndDate = "1900-01-02";
+
+function formatDate(date) {
+  if (!date) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${date}T00:00:00`));
+}
+
+function splitValues(value, separator) {
+  if (!value || value === "-") {
+    return [];
+  }
+
+  return value
+    .split(separator)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function cleanDayInformation(value) {
+  if (!value || value === "-") {
+    return "Tidak ada informasi khusus untuk hari ini.";
+  }
+
+  return value
+    .replace(/,?\s*Wewaran penyusun:[^;]+;?/gi, " ")
+    .replace(/\.,/g, ". ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function OrnamentDivider() {
+  return (
+    <div className="print-ornament-divider">
+      <span />
+      <img src={ornament} alt="" />
+      <span />
+    </div>
+  );
+}
+
+function getCalendarTheme(status) {
+  const normalizedStatus = String(status || "").toLowerCase();
+
+  if (normalizedStatus.includes("purnama")) {
+    return "print-calendar-purnama";
+  }
+
+  if (normalizedStatus.includes("tilem")) {
+    return "print-calendar-tilem";
+  }
+
+  return "print-calendar-regular";
+}
+
+function PrintableCalendar({ calendarRef, data }) {
+  const pakakalan = splitValues(data.pakakalan, ",");
+  const goodTimes = splitValues(data.dawuh, "|");
+  const leftWewaran = [
+    ["Ekawara", data.ekawara],
+    ["Dwiwara", data.dwiwara],
+    ["Triwara", data.triwara],
+    ["Caturwara", data.caturwara],
+    ["Pancawara", data.pancawara],
+  ];
+  const rightWewaran = [
+    ["Sadwara", data.sadwara],
+    ["Saptawara", data.saptawara],
+    ["Astawara", data.astawara],
+    ["Sangawara", data.sangawara],
+    ["Dasawara", data.dasawara],
+  ];
+  const karakterDasar = [
+    ["Ekajalarsi", data.ekajalarsi],
+    ["Palalintangan", data.palalintangan],
+    ["Pararasan", data.pararasan],
+    ["Pratiti Samutpada", data.pratiti_samutpada],
+  ];
+
+  return (
+    <article ref={calendarRef} className={`print-calendar ${getCalendarTheme(data.status_purnama)}`}>
+      <div className="print-calendar-frame">
+        <OrnamentDivider />
+
+        <h1 className="print-calendar-date">
+          {data.tanggal} {new Intl.DateTimeFormat("id-ID", { month: "long" }).format(
+            new Date(`${data.tanggal_lengkap}T00:00:00`)
+          )} {data.tahun}
+        </h1>
+
+        <div className="print-calendar-summary">
+          {[
+            ["Ingkel", data.ingkel],
+            ["Wuku", data.wuku],
+            ["Sasih", data.sasih],
+            [data.label_lunar, data.nilai_lunar],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+
+        <div className="print-wewaran-grid">
+          {[leftWewaran, rightWewaran].map((column, index) => (
+            <div key={index} className="print-wewaran-column">
+              {column.map(([label, value]) => (
+                <div key={label}>
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <div className="print-character-grid">
+          {karakterDasar.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <strong>{value}</strong>
+            </div>
+          ))}
+        </div>
+
+        <section className="print-calendar-section">
+          <h2>Pakakalan</h2>
+          <div className="print-calendar-tags">
+            {pakakalan.map((item) => <span key={item}>{item}</span>)}
+          </div>
+        </section>
+
+        <section className="print-calendar-section">
+          <h2>Baik Buruk Hari</h2>
+          <p>{cleanDayInformation(data.baik_buruk_hari)}</p>
+        </section>
+
+        <section className="print-calendar-section">
+          <h2>Waktu Baik</h2>
+          <div className="print-calendar-tags">
+            {goodTimes.length ? (
+              goodTimes.map((item) => <span key={item}>{item}</span>)
+            ) : (
+              <p>Tidak ada waktu khusus.</p>
+            )}
+          </div>
+        </section>
+
+        <OrnamentDivider />
+      </div>
+    </article>
+  );
+}
 
 export default function CetakKalender() {
+  const [startDate, setStartDate] = useState(initialStartDate);
+  const [endDate, setEndDate] = useState(initialEndDate);
+  const [calendarData, setCalendarData] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [downloadingPng, setDownloadingPng] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [error, setError] = useState("");
+  const calendarRef = useRef(null);
+
+  const preview = calendarData[activeIndex];
+
+  async function handleGenerate(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await generateCalendar(startDate, endDate);
+      setCalendarData(response.data || []);
+      setActiveIndex(0);
+
+      if (!response.data?.length) {
+        setError("Data kalender untuk rentang tanggal tersebut tidak ditemukan.");
+      }
+    } catch (err) {
+      setCalendarData([]);
+      setActiveIndex(0);
+      setError(
+        err.response?.data?.detail ||
+          err.message ||
+          "Tidak dapat terhubung ke backend."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function showPrevious() {
+    setActiveIndex((index) => Math.max(0, index - 1));
+  }
+
+  function showNext() {
+    setActiveIndex((index) => Math.min(calendarData.length - 1, index + 1));
+  }
+
+  function printCalendar() {
+    window.print();
+  }
+
+  async function renderCalendarImage() {
+    return toPng(calendarRef.current, {
+      backgroundColor: "#fffdfb",
+      cacheBust: true,
+      pixelRatio: 3,
+    });
+  }
+
+  async function downloadPng() {
+    if (!calendarRef.current || !preview) {
+      return;
+    }
+
+    setDownloadingPng(true);
+    setError("");
+
+    try {
+      const dataUrl = await renderCalendarImage();
+      const link = document.createElement("a");
+      link.download = `kalender-wariga-${preview.tanggal_lengkap}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      setError(err.message || "Gambar kalender gagal diunduh.");
+    } finally {
+      setDownloadingPng(false);
+    }
+  }
+
+  async function downloadPdf() {
+    if (!calendarRef.current || !preview) {
+      return;
+    }
+
+    setDownloadingPdf(true);
+    setError("");
+
+    try {
+      const { jsPDF } = await import("jspdf");
+      const dataUrl = await renderCalendarImage();
+      const image = new Image();
+      image.src = dataUrl;
+      await image.decode();
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+      const margin = 8;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const availableWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - margin * 2;
+      const scale = Math.min(
+        availableWidth / image.width,
+        availableHeight / image.height
+      );
+      const imageWidth = image.width * scale;
+      const imageHeight = image.height * scale;
+
+      pdf.addImage(
+        dataUrl,
+        "PNG",
+        (pageWidth - imageWidth) / 2,
+        (pageHeight - imageHeight) / 2,
+        imageWidth,
+        imageHeight
+      );
+      pdf.save(`kalender-wariga-${preview.tanggal_lengkap}.pdf`);
+    } catch (err) {
+      setError(err.message || "PDF kalender gagal diunduh.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
-      <section className="card p-7">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold">Preview Hasil</h2>
-            <p className="mt-1 text-sm text-gray-500">
-              Tanggal 29 Mei 2026 - 30 Mei 2026
+    <div className="min-h-[calc(100vh-120px)] rounded-3xl bg-[#FFF7ED] p-4 sm:p-6">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(380px,1fr)] xl:gap-8">
+        <section className="card p-4 sm:p-6 md:p-7">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <h2 className="text-2xl font-bold sm:text-3xl">Preview Hasil</h2>
+                <p className="text-sm text-gray-600 sm:text-base">
+                  Tanggal {formatDate(startDate)} - {formatDate(endDate)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                className="rounded-xl border border-baliBorder px-4 py-2 disabled:opacity-40"
+                type="button"
+                onClick={showPrevious}
+                disabled={!preview || activeIndex === 0}
+              >
+                ‹
+              </button>
+              <button
+                className="rounded-xl border border-baliBorder px-4 py-2 disabled:opacity-40"
+                type="button"
+                onClick={showNext}
+                disabled={!preview || activeIndex === calendarData.length - 1}
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-baliBorder bg-[#fdfcfb] p-3 shadow-soft sm:p-5">
+            {!preview ? (
+              <div className="flex min-h-[450px] items-center justify-center text-sm text-gray-500">
+                Pilih rentang tanggal, lalu klik Konfirmasi Tanggal untuk memuat
+                preview dari backend.
+              </div>
+            ) : (
+              <PrintableCalendar calendarRef={calendarRef} data={preview} />
+            )}
+          </div>
+        </section>
+
+        <div className="space-y-6">
+          <section className="card p-5 sm:p-6 md:p-8">
+            <h2 className="text-xl font-bold sm:text-2xl">Cetak Kalender</h2>
+            <p className="mt-4 max-w-[760px] text-sm leading-7 text-gray-500">
+              Pilih tanggal kalender. Sistem akan mengambil data Bali dan Wariga
+              dari backend untuk ditampilkan sebagai pratinjau.
             </p>
-          </div>
-          <div className="flex gap-2">
-            <button className="rounded-xl border border-baliBorder px-4 py-2">‹</button>
-            <button className="rounded-xl border border-baliBorder px-4 py-2">›</button>
-          </div>
-        </div>
 
-        <div className="min-h-[650px] rounded-2xl border border-baliBorder bg-white p-8 text-center shadow-soft">
-          <p className="font-serifBali text-sm uppercase tracking-[0.35em] text-gray-500">
-            Kalender Bali Wariga
-          </p>
-          <h1 className="mt-5 font-serifBali text-4xl font-bold">1 MEI 2026</h1>
+            <form onSubmit={handleGenerate}>
+              <div className="mt-8 grid grid-cols-1 gap-6 border-t border-baliBorder pt-8 md:grid-cols-2">
+                <div>
+                  <label className="mb-3 flex items-center gap-2 font-semibold">
+                    <CalendarDays size={22} />
+                    Pilih Tanggal Awal
+                  </label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    required
+                  />
+                </div>
 
-          <div className="mt-8 grid grid-cols-4 gap-4 border-y border-baliBorder py-5 text-sm">
-            <b>INGKEL<br />WONG</b>
-            <b>WUKU<br />LANGKIR</b>
-            <b>SASIH<br />KENAM</b>
-            <b>PANGELONG<br />15-TILEM</b>
-          </div>
+                <div>
+                  <label className="mb-3 flex items-center gap-2 font-semibold">
+                    <CalendarDays size={22} />
+                    Pilih Tanggal Akhir
+                  </label>
+                  <input
+                    className="input"
+                    type="date"
+                    value={endDate}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    required
+                  />
+                </div>
+              </div>
 
-          <h2 className="mt-12 font-serifBali text-xl font-bold">KARAKTER KELAHIRAN</h2>
-          <p className="mx-auto mt-4 max-w-[520px] text-justify text-sm leading-7 text-gray-600">
-            Kepribadian ini memiliki kualitas baik yang menonjol, seperti kemampuan
-            membangun hubungan baik dengan orang lain dan kepekaan terhadap
-            lingkungan sekitar.
-          </p>
+              {error && (
+                <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
 
-          <h2 className="mt-12 font-serifBali text-xl font-bold">PAKAKALAN</h2>
-          <div className="mt-4 flex flex-wrap justify-center gap-3">
-            {["Amerta Buwana", "Babi Turun", "Kala Ketemu"].map((item) => (
-              <span key={item} className="rounded-lg bg-gray-600 px-3 py-2 text-xs text-white">
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
+              <div className="mt-8 flex justify-end">
+                <button
+                  className="btn-primary flex w-full items-center justify-center gap-2 disabled:opacity-60 sm:w-auto"
+                  type="submit"
+                  disabled={loading}
+                >
+                  <CheckSquare size={18} />
+                  {loading ? "Memuat..." : "Konfirmasi Tanggal"}
+                </button>
+              </div>
+            </form>
+          </section>
 
-      <div className="space-y-6">
-        <section className="card p-8">
-          <h2 className="text-2xl font-bold">Cetak Kalender</h2>
-          <p className="mt-4 max-w-[760px] text-sm leading-7 text-gray-500">
-            Pilih tanggal dan template kalender yang diinginkan. Sistem akan
-            menghasilkan pratinjau kalender Bali dan Wariga yang dapat dicetak
-            atau diunduh.
-          </p>
+          <button
+            className="btn-primary flex w-full items-center justify-center gap-2 disabled:opacity-60"
+            type="button"
+            onClick={printCalendar}
+            disabled={!preview}
+          >
+            <Printer size={18} />
+            Cetak Preview
+          </button>
 
-          <div className="mt-8 grid grid-cols-1 gap-6 border-t border-baliBorder pt-8 md:grid-cols-2">
-            <div>
-              <label className="mb-3 flex items-center gap-2 font-semibold">
-                <CalendarDays size={22} />
-                Pilih Tanggal Awal
-              </label>
-              <input className="input" type="text" value="29 Mei 2026" readOnly />
+          <section className="card p-5 sm:p-6 md:p-8">
+            <h2 className="text-xl font-bold sm:text-2xl">Unduh Hasil</h2>
+            <div className="mt-8 space-y-6">
+              <DownloadCard
+                type="PDF"
+                description="Unduh sebagai dokumen siap cetak yang rapi dan profesional."
+                disabled={!preview}
+                loading={downloadingPdf}
+                onDownload={downloadPdf}
+              />
+              <DownloadCard
+                type="PNG"
+                description="Unduh sebagai gambar kalender beresolusi tinggi."
+                disabled={!preview}
+                loading={downloadingPng}
+                onDownload={downloadPng}
+              />
             </div>
-
-            <div>
-              <label className="mb-3 flex items-center gap-2 font-semibold">
-                <CalendarDays size={22} />
-                Pilih Tanggal Akhir
-              </label>
-              <input className="input" type="text" value="30 Mei 2026" readOnly />
-            </div>
-          </div>
-
-          <div className="mt-8 flex justify-end">
-            <button className="btn-primary flex items-center gap-2">
-              <CheckSquare size={18} />
-              Konfirmasi Tanggal
-            </button>
-          </div>
-        </section>
-
-        <section className="card p-8">
-          <h2 className="text-2xl font-bold">Unduh Hasil</h2>
-          <div className="mt-8 space-y-6">
-            <DownloadCard
-              type="PDF"
-              description="Unduh sebagai dokumen siap cetak yang rapi dan profesional."
-            />
-            <DownloadCard
-              type="PNG"
-              description="Unduh sebagai gambar berkualitas tinggi dan praktis."
-            />
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </div>
   );
