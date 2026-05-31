@@ -32,12 +32,21 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 h-screen w-[280px] overflow-hidden border-r border-baliBorder bg-[#fbf6f0] transition-transform duration-300 ${
+        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col overflow-hidden border-r border-baliBorder bg-[#fbf6f0] transition-transform duration-300 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        {/* Gambar Pura */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 flex justify-center overflow-hidden">
+          <img
+            src={pura}
+            alt=""
+            className="w-[210px] translate-y-6 object-contain opacity-25"
+          />
+        </div>
+
         {/* Title */}
-        <div className="px-6 pt-8">
+        <div className="relative z-10 shrink-0 px-6 pt-8">
           <h1 className="text-[24px] font-bold leading-tight text-baliDark">
             Kalender Bali
             <br />
@@ -48,7 +57,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Menu */}
-        <nav className="space-y-3 px-4">
+        <nav className="relative z-10 flex-1 space-y-3 overflow-y-auto px-4 pb-8">
           {menus.map((menu) => {
             const Icon = menu.icon;
 
@@ -73,15 +82,6 @@ export default function Sidebar({ open, onClose }) {
             );
           })}
         </nav>
-
-        {/* Gambar Pura */}
-        <div className="absolute bottom-0 left-0 right-0 flex justify-center">
-          <img
-            src={pura}
-            alt="Pura Bali"
-            className="w-[230px] object-contain opacity-80"
-          />
-        </div>
       </aside>
     </>
   );

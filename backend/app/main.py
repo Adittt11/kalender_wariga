@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.generate_routes import router as generate_router
 from app.routes.calendar_routes import router as calendar_router
 from app.routes.dashboard_routes import router as dashboard_router
+from app.routes.chat_routes import router as chat_router
 
 app = FastAPI(title="Kalender Bali Wariga API")
 
@@ -31,6 +32,12 @@ app.include_router(
     dashboard_router,
     prefix="/api/dashboard",
     tags=["Dashboard Calendar"]
+)
+
+app.include_router(
+    chat_router,
+    prefix="/api/chat",
+    tags=["Tanya Wariga AI"]
 )
 
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { CalendarDays, Search, Sparkles, UserRound } from "lucide-react";
-import { getCalendarByDate } from "../services/calendarApi";
+import { generateCharacterAi, getCalendarByDate } from "../services/calendarApi";
 
 const initialDate = "1900-01-01";
 
@@ -20,16 +20,24 @@ export default function KarakterKelahiran() {
   const [date, setDate] = useState(initialDate);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [loadingAi, setLoadingAi] = useState(false);
+  const [aiCharacter, setAiCharacter] = useState("");
   const [error, setError] = useState("");
 
   async function handleSubmit(event) {
     event.preventDefault();
     setLoading(true);
     setError("");
+    setAiCharacter("");
 
     try {
-      const response = await getCalendarByDate(date);
-      setResult(response.data);
+      setLoadingAi(true);
+      const [calendarResponse, aiResponse] = await Promise.all([
+        getCalendarByDate(date),
+        generateCharacterAi(date),
+      ]);
+      setResult(calendarResponse.data);
+      setAiCharacter(aiResponse.data.karakter_kelahiran_ai);
     } catch (err) {
       setResult(null);
       setError(
@@ -39,6 +47,7 @@ export default function KarakterKelahiran() {
       );
     } finally {
       setLoading(false);
+      setLoadingAi(false);
     }
   }
 
@@ -137,8 +146,8 @@ export default function KarakterKelahiran() {
               </div>
               <h2 className="text-xl font-bold text-baliDark">Makna Karakter Kelahiran</h2>
             </div>
-            <p className="mt-5 text-justify text-sm leading-8 text-gray-600">
-              {result.karakter_kelahiran}
+            <p className="mt-5 whitespace-pre-line text-justify text-sm leading-8 text-gray-600">
+              {loadingAi ? "Sedang menyusun makna karakter dengan AI..." : aiCharacter}
             </p>
           </section>
         </div>

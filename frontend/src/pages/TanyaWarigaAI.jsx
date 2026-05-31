@@ -7,8 +7,8 @@ export default function TanyaWarigaAI() {
         <section className="card p-5 sm:p-6 md:p-8">
           <h1 className="text-xl font-bold sm:text-2xl">Tanya Wariga AI</h1>
           <p className="mt-3 text-sm leading-7 text-gray-500">
-            Halaman ini digunakan untuk bertanya seputar kalender Bali, dewasa ayu,
-            pakakalan, karakter kelahiran, dan informasi Wariga lainnya.
+            Berbincang dengan chatbot Groq AI untuk bertanya seputar kalender Bali,
+            dewasa ayu, pakakalan, karakter kelahiran, dan informasi Wariga lainnya.
           </p>
         </section>
 

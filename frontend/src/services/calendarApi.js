@@ -10,6 +10,11 @@ export async function getCalendarByDate(date) {
   return response.data;
 }
 
+export async function generateCharacterAi(date) {
+  const response = await api.post(`/api/calendar/date/${date}/character-ai`);
+  return response.data;
+}
+
 export async function generateCalendar(startDate, endDate) {
   const response = await api.post("/api/generate/kalender", {
     start_date: startDate,

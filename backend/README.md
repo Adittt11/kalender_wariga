@@ -27,6 +27,8 @@ DB_PASSWORD=your-database-password
 DB_HOST=your-database-host
 DB_PORT=5432
 DB_NAME=postgres
+GROQ_API_KEY=your-groq-api-key
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
 ## API
@@ -56,4 +58,16 @@ Ambil per bulan:
 
 ```bash
 GET http://127.0.0.1:8000/api/calendar/month/2026/5
+```
+
+Generate narasi karakter kelahiran dengan Groq AI:
+
+```bash
+POST http://127.0.0.1:8000/api/calendar/date/1900-01-01/character-ai
+```
+
+Chat Tanya Wariga AI:
+
+```bash
+POST http://127.0.0.1:8000/api/chat
 ```

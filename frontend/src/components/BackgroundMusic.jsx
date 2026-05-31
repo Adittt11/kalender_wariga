@@ -10,7 +10,9 @@ export default function BackgroundMusic() {
     const audio = audioRef.current;
 
     async function playMusic() {
-      if (!audio.paused) {
+      const mutedByUser = localStorage.getItem("wariga-music-muted") === "true";
+
+      if (mutedByUser || !audio.paused) {
         return;
       }
 
@@ -56,6 +58,7 @@ export default function BackgroundMusic() {
 
     if (audio.paused) {
       try {
+        localStorage.removeItem("wariga-music-muted");
         await audio.play();
         setPlaying(true);
       } catch {
@@ -65,6 +68,7 @@ export default function BackgroundMusic() {
     }
 
     audio.pause();
+    localStorage.setItem("wariga-music-muted", "true");
     setPlaying(false);
   }
 

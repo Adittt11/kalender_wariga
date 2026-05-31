@@ -1,7 +1,7 @@
-import { Menu } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
 import ornamen from "../assets/ornamen.png";
 
-export default function Header({ onToggleSidebar }) {
+export default function Header({ darkMode, onToggleSidebar, onToggleTheme }) {
   return (
     <header className="flex min-h-[90px] items-center gap-5 border-b border-baliBorder bg-white px-4 py-4 sm:px-6 md:px-8">
       {/* Tombol Sidebar */}
@@ -29,6 +29,16 @@ export default function Header({ onToggleSidebar }) {
           Selamat datang di dashboard kalender bali wariga
         </p>
       </div>
+
+      <button
+        onClick={onToggleTheme}
+        className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-baliBorder bg-white text-baliBrown shadow-sm transition hover:bg-baliSoft"
+        type="button"
+        aria-label={darkMode ? "Aktifkan light mode" : "Aktifkan night mode"}
+        title={darkMode ? "Light mode" : "Night mode"}
+      >
+        {darkMode ? <Sun size={21} /> : <Moon size={21} />}
+      </button>
     </header>
   );
 }

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Poppins:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -91,13 +91,97 @@ body {
   @apply bg-red-50 text-red-600;
 }
 
+[data-theme="dark"] body {
+  background: #120f0e;
+  color: #f6eee8;
+}
+
+[data-theme="dark"] .app-shell {
+  background: #120f0e;
+}
+
+[data-theme="dark"] header,
+[data-theme="dark"] aside,
+[data-theme="dark"] .card,
+[data-theme="dark"] section.bg-white,
+[data-theme="dark"] div.bg-white,
+[data-theme="dark"] button.bg-white,
+[data-theme="dark"] label.bg-white {
+  background-color: #201a18;
+  border-color: #44352f;
+}
+
+[data-theme="dark"] aside {
+  background-color: #191412;
+}
+
+[data-theme="dark"] .bg-\[\#FFF7ED\] {
+  background-color: #171311;
+}
+
+[data-theme="dark"] .bg-baliSoft,
+[data-theme="dark"] .bg-baliCream,
+[data-theme="dark"] .calendar-day-selected {
+  background-color: #352821;
+}
+
+[data-theme="dark"] .border-baliBorder,
+[data-theme="dark"] .calendar-month-row:not(:last-child) {
+  border-color: #44352f;
+}
+
+[data-theme="dark"] .text-baliDark,
+[data-theme="dark"] .calendar-day-cell strong {
+  color: #f6eee8;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-slate-500,
+[data-theme="dark"] .text-slate-600 {
+  color: #b8aaa3;
+}
+
+[data-theme="dark"] .input,
+[data-theme="dark"] input {
+  background-color: #2a211e;
+  border-color: #44352f;
+  color: #f6eee8;
+}
+
+[data-theme="dark"] .calendar-month-header > div,
+[data-theme="dark"] .calendar-wuku-cell {
+  background-color: #251e1b;
+  border-color: #44352f;
+  color: #b8aaa3;
+}
+
+[data-theme="dark"] .calendar-day-cell {
+  background-color: #201a18;
+  border-color: #44352f;
+}
+
+[data-theme="dark"] .calendar-day-cell:hover,
+[data-theme="dark"] .calendar-day-selected {
+  background-color: #352821;
+}
+
+[data-theme="dark"] .calendar-day-cell:disabled {
+  background-color: #171311;
+}
+
+[data-theme="dark"] .print-calendar {
+  background-color: #fffdfb;
+}
+
 .print-calendar {
   --calendar-accent: #a97957;
   --calendar-color: #6b391b;
   --calendar-tag: #6b391b;
   color: var(--calendar-color);
   container-type: inline-size;
-  font-family: Georgia, serif;
+  font-family: "Poppins", sans-serif;
   margin: 0 auto;
   max-width: 680px;
 }
@@ -177,8 +261,10 @@ body {
 }
 
 .print-calendar-date {
+  font-family: "Montserrat", sans-serif;
   font-size: clamp(1.65rem, 5cqw, 3.4rem);
   font-weight: 700;
+  letter-spacing: 0.08em;
   margin: 0 0 3cqw;
   text-align: center;
   text-transform: uppercase;
@@ -212,6 +298,7 @@ body {
 .print-character-grid span {
   display: block;
   font-size: clamp(0.56rem, 1.55cqw, 0.95rem);
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -237,6 +324,7 @@ body {
   gap: 1cqw;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   padding: 0.75cqw 0;
+  letter-spacing: 0.025em;
   text-transform: uppercase;
 }
 
@@ -252,6 +340,7 @@ body {
 .print-calendar-section h2 {
   border-bottom: 2px solid var(--calendar-color);
   font-size: clamp(1.05rem, 2.7cqw, 1.75rem);
+  letter-spacing: 0.075em;
   margin: 1.45cqw 0 1cqw;
   padding-bottom: 0.7cqw;
   text-transform: uppercase;
