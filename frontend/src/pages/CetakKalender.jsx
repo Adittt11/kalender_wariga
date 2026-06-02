@@ -7,6 +7,7 @@ import ornament from "../assets/ornamen.png";
 
 const initialStartDate = "1900-01-01";
 const initialEndDate = "1900-01-02";
+const exportCalendarWidth = 680;
 
 function formatDate(date) {
   if (!date) {
@@ -292,12 +293,59 @@ export default function CetakKalender() {
     window.print();
   }
 
+  async function waitForCalendarAssets() {
+    await document.fonts?.ready;
+
+    const images = Array.from(calendarRef.current?.querySelectorAll("img") || []);
+    await Promise.all(
+      images.map((image) => (
+        image.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              image.addEventListener("load", resolve, { once: true });
+              image.addEventListener("error", resolve, { once: true });
+            })
+      ))
+    );
+  }
+
   async function renderCalendarImage() {
-    return toPng(calendarRef.current, {
-      backgroundColor: "#fffdfb",
-      cacheBust: true,
-      pixelRatio: 3,
-    });
+    await waitForCalendarAssets();
+
+    const calendar = calendarRef.current;
+    const previousStyle = calendar.getAttribute("style");
+    calendar.classList.add("print-calendar-export");
+    calendar.style.margin = "0";
+    calendar.style.maxWidth = "none";
+    calendar.style.width = `${exportCalendarWidth}px`;
+
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+
+    try {
+      const height = Math.ceil(calendar.scrollHeight);
+
+      return await toPng(calendar, {
+        backgroundColor: "#fffdfb",
+        cacheBust: true,
+        height,
+        pixelRatio: 3,
+        style: {
+          height: `${height}px`,
+          margin: "0",
+          maxWidth: "none",
+          width: `${exportCalendarWidth}px`,
+        },
+        width: exportCalendarWidth,
+      });
+    } finally {
+      calendar.classList.remove("print-calendar-export");
+
+      if (previousStyle === null) {
+        calendar.removeAttribute("style");
+      } else {
+        calendar.setAttribute("style", previousStyle);
+      }
+    }
   }
 
   async function downloadPng() {

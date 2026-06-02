@@ -14,6 +14,35 @@ function splitValues(value, separator) {
   return value.split(separator).map((item) => item.trim()).filter(Boolean);
 }
 
+function parseDayInformation(value) {
+  if (!value || value === "-") {
+    return [];
+  }
+
+  return value.split(";").reduce((items, part) => {
+    const cleaned = part
+      .replace(/,?\s*Wewaran penyusun:.*$/gi, "")
+      .replace(/\.,/g, ".")
+      .replace(/\s+/g, " ")
+      .trim();
+    const separatorIndex = cleaned.indexOf(":");
+
+    if (separatorIndex <= 0) {
+      return items;
+    }
+
+    const name = cleaned.slice(0, separatorIndex).trim();
+    const description = cleaned.slice(separatorIndex + 1).trim();
+
+    if (!name || !description || name.toLowerCase() === "wewaran penyusun") {
+      return items;
+    }
+
+    items.push({ name, description });
+    return items;
+  }, []);
+}
+
 function formatDate(value) {
   if (!value) {
     return "-";
@@ -98,6 +127,7 @@ export default function Dashboard() {
   }, []);
 
   const goodTimes = splitValues(detail?.dawuh, "|");
+  const dayInformation = parseDayInformation(detail?.baik_buruk_hari);
 
   return (
     <div className="dashboard-page">
@@ -153,8 +183,18 @@ export default function Dashboard() {
               <div className="dashboard-card-icon"><Scale size={19} /></div>
               <h2>Ala - Ayu Dewasa</h2>
             </div>
-            <p><strong>Pakakalan:</strong> {detail?.pakakalan || "-"}</p>
-            <p className="mt-3 text-gray-600">{detail?.baik_buruk_hari || "Tidak ada informasi khusus."}</p>
+            <div className="dashboard-dewasa-list">
+              {dayInformation.length ? (
+                dayInformation.map((item) => (
+                  <article key={`${item.name}-${item.description}`}>
+                    <h3>{item.name}</h3>
+                    <p>{item.description}</p>
+                  </article>
+                ))
+              ) : (
+                <p>Tidak ada informasi khusus.</p>
+              )}
+            </div>
           </section>
         </div>
       </div>
