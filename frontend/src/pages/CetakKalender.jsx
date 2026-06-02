@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, CheckSquare, CircleCheck, CircleX, Printer } from "lucide-react";
+import { CalendarDays, CheckSquare, CircleCheck, CircleX } from "lucide-react";
 import { toPng } from "html-to-image";
+import { createRoot } from "react-dom/client";
 import DownloadCard from "../components/DownloadCard";
 import { generateCalendar, generatePrintAi } from "../services/calendarApi";
 import ornament from "../assets/ornamen.png";
@@ -289,14 +290,10 @@ export default function CetakKalender() {
     setActiveIndex((index) => Math.min(calendarData.length - 1, index + 1));
   }
 
-  function printCalendar() {
-    window.print();
-  }
-
-  async function waitForCalendarAssets() {
+  async function waitForCalendarAssets(calendar) {
     await document.fonts?.ready;
 
-    const images = Array.from(calendarRef.current?.querySelectorAll("img") || []);
+    const images = Array.from(calendar?.querySelectorAll("img") || []);
     await Promise.all(
       images.map((image) => (
         image.complete
@@ -309,10 +306,9 @@ export default function CetakKalender() {
     );
   }
 
-  async function renderCalendarImage() {
-    await waitForCalendarAssets();
+  async function renderCalendarImage(calendar) {
+    await waitForCalendarAssets(calendar);
 
-    const calendar = calendarRef.current;
     const previousStyle = calendar.getAttribute("style");
     calendar.classList.add("print-calendar-export");
     calendar.style.margin = "0";
@@ -348,6 +344,78 @@ export default function CetakKalender() {
     }
   }
 
+  async function enrichCalendarRange() {
+    const enrichedCalendars = [];
+
+    for (const item of calendarData) {
+      const cachedItem = aiCacheRef.current[item.tanggal_lengkap];
+
+      if (cachedItem) {
+        enrichedCalendars.push(cachedItem);
+        continue;
+      }
+
+      if (item.ai_ready) {
+        enrichedCalendars.push(item);
+        continue;
+      }
+
+      const response = await generatePrintAi(item.tanggal_lengkap);
+      const enrichedItem = {
+        ...item,
+        ...response.data,
+        ai_ready: true,
+      };
+      aiCacheRef.current[item.tanggal_lengkap] = enrichedItem;
+      enrichedCalendars.push(enrichedItem);
+    }
+
+    setCalendarData(enrichedCalendars);
+    return enrichedCalendars;
+  }
+
+  async function renderCalendarRange() {
+    const enrichedCalendars = await enrichCalendarRange();
+    const host = document.createElement("div");
+    const calendarElements = [];
+    const root = createRoot(host);
+
+    host.className = "print-calendar-export-host";
+    document.body.appendChild(host);
+    root.render(
+      <div>
+        {enrichedCalendars.map((item, index) => (
+          <PrintableCalendar
+            calendarRef={(element) => {
+              calendarElements[index] = element;
+            }}
+            data={item}
+            key={item.tanggal_lengkap}
+          />
+        ))}
+      </div>
+    );
+
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+    try {
+      const images = [];
+
+      for (const calendar of calendarElements) {
+        images.push(await renderCalendarImage(calendar));
+      }
+
+      return images;
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  }
+
+  function getExportFileName(extension) {
+    return `kalender-wariga-${startDate}-sampai-${endDate}.${extension}`;
+  }
+
   async function downloadPng() {
     if (!calendarRef.current || !preview) {
       return;
@@ -357,11 +425,13 @@ export default function CetakKalender() {
     setError("");
 
     try {
-      const dataUrl = await renderCalendarImage();
-      const link = document.createElement("a");
-      link.download = `kalender-wariga-${preview.tanggal_lengkap}.png`;
-      link.href = dataUrl;
-      link.click();
+      const dataUrls = await renderCalendarRange();
+      dataUrls.forEach((dataUrl, index) => {
+        const link = document.createElement("a");
+        link.download = `kalender-wariga-${calendarData[index].tanggal_lengkap}.png`;
+        link.href = dataUrl;
+        link.click();
+      });
     } catch (err) {
       setError(err.message || "Gambar kalender gagal diunduh.");
     } finally {
@@ -379,11 +449,7 @@ export default function CetakKalender() {
 
     try {
       const { jsPDF } = await import("jspdf");
-      const dataUrl = await renderCalendarImage();
-      const image = new Image();
-      image.src = dataUrl;
-      await image.decode();
-
+      const dataUrls = await renderCalendarRange();
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -394,22 +460,33 @@ export default function CetakKalender() {
       const pageHeight = pdf.internal.pageSize.getHeight();
       const availableWidth = pageWidth - margin * 2;
       const availableHeight = pageHeight - margin * 2;
-      const scale = Math.min(
-        availableWidth / image.width,
-        availableHeight / image.height
-      );
-      const imageWidth = image.width * scale;
-      const imageHeight = image.height * scale;
+      for (const [index, dataUrl] of dataUrls.entries()) {
+        const image = new Image();
+        image.src = dataUrl;
+        await image.decode();
 
-      pdf.addImage(
-        dataUrl,
-        "PNG",
-        (pageWidth - imageWidth) / 2,
-        (pageHeight - imageHeight) / 2,
-        imageWidth,
-        imageHeight
-      );
-      pdf.save(`kalender-wariga-${preview.tanggal_lengkap}.pdf`);
+        if (index > 0) {
+          pdf.addPage();
+        }
+
+        const scale = Math.min(
+          availableWidth / image.width,
+          availableHeight / image.height
+        );
+        const imageWidth = image.width * scale;
+        const imageHeight = image.height * scale;
+
+        pdf.addImage(
+          dataUrl,
+          "PNG",
+          (pageWidth - imageWidth) / 2,
+          (pageHeight - imageHeight) / 2,
+          imageWidth,
+          imageHeight
+        );
+      }
+
+      pdf.save(getExportFileName("pdf"));
     } catch (err) {
       setError(err.message || "PDF kalender gagal diunduh.");
     } finally {
@@ -528,29 +605,19 @@ export default function CetakKalender() {
             </form>
           </section>
 
-          <button
-            className="btn-primary flex w-full items-center justify-center gap-2 disabled:opacity-60"
-            type="button"
-            onClick={printCalendar}
-            disabled={!preview || loadingAi || !preview.ai_ready}
-          >
-            <Printer size={18} />
-            Cetak Preview
-          </button>
-
           <section className="card p-5 sm:p-6 md:p-8">
             <h2 className="text-xl font-bold sm:text-2xl">Unduh Hasil</h2>
             <div className="mt-8 space-y-6">
               <DownloadCard
                 type="PDF"
-                description="Unduh sebagai dokumen siap cetak yang rapi dan profesional."
+                description="Unduh seluruh rentang tanggal, satu halaman untuk setiap hari."
                 loading={downloadingPdf}
                 disabled={!preview || loadingAi || !preview.ai_ready}
                 onDownload={downloadPdf}
               />
               <DownloadCard
                 type="PNG"
-                description="Unduh sebagai gambar kalender beresolusi tinggi."
+                description="Unduh setiap tanggal sebagai file PNG terpisah."
                 disabled={!preview || loadingAi || !preview.ai_ready}
                 loading={downloadingPng}
                 onDownload={downloadPng}

@@ -1018,6 +1018,14 @@ body {
   width: 52px;
 }
 
+.print-calendar-export-host {
+  left: -100000px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 680px;
+}
+
 @media (max-width: 640px) {
   .print-calendar-frame {
     border-width: 3px;
