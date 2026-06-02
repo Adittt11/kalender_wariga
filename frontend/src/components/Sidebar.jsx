@@ -8,7 +8,8 @@ import {
   Droplet
 } from "lucide-react";
 
-import pura from "../assets/pura.png";
+import ornamen from "../assets/ornamen.png";
+import pura from "../assets/pura1.png";
 
 const menus = [
   { label: "Dashboard", path: "/", icon: Home },
@@ -32,32 +33,38 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col overflow-hidden border-r border-baliBorder bg-[#fbf6f0] transition-transform duration-300 ${
+        className={`wariga-sidebar fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col overflow-hidden transition-transform duration-300 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Gambar Pura */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-0 flex justify-center overflow-hidden">
+        <div className="wariga-sidebar-scenery pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-hidden">
           <img
             src={pura}
             alt=""
-            className="w-[210px] translate-y-6 object-contain opacity-25"
+            className="wariga-sidebar-scenery-image"
           />
         </div>
 
         {/* Title */}
-        <div className="relative z-10 shrink-0 px-6 pt-8">
-          <h1 className="text-[24px] font-bold leading-tight text-baliDark">
-            Kalender Bali
-            <br />
-            Wariga
-          </h1>
-
-          <div className="my-7 h-[1px] bg-baliBrown/80" />
+        <div className="relative z-10 flex shrink-0 items-center gap-3 px-6 pb-6 pt-7">
+          <img
+            src={ornamen}
+            alt=""
+            className="h-14 w-14 object-contain brightness-0 invert sepia saturate-[4] hue-rotate-[350deg]"
+          />
+          <div>
+            <h1 className="wariga-sidebar-title text-[25px] font-bold leading-none">
+              WARIGA
+            </h1>
+            <p className="mt-1 text-sm font-medium tracking-wide text-[#e4bf82]">
+              Kalender Bali
+            </p>
+          </div>
         </div>
 
         {/* Menu */}
-        <nav className="relative z-10 flex-1 space-y-3 overflow-y-auto px-4 pb-8">
+        <nav className="relative z-10 flex-1 space-y-2 overflow-y-auto px-4 pb-[330px]">
           {menus.map((menu) => {
             const Icon = menu.icon;
 
@@ -69,10 +76,10 @@ export default function Sidebar({ open, onClose }) {
                   if (window.innerWidth < 1024) onClose();
                 }}
                 className={({ isActive }) =>
-                  `flex items-center gap-4 rounded-2xl px-5 py-4 text-[14px] transition ${
+                  `wariga-sidebar-menu flex items-center gap-4 rounded-xl px-4 py-3.5 text-[14px] transition ${
                     isActive
-                      ? "bg-baliCream font-semibold text-baliBrown"
-                      : "text-baliDark hover:bg-baliCream/60"
+                      ? "wariga-sidebar-menu-active font-semibold"
+                      : "hover:bg-white/10"
                   }`
                 }
               >

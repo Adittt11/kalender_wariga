@@ -85,6 +85,95 @@ def get_all_makna():
         return [dict(row._mapping) for row in result]
 
 
+def get_kalender_rows_by_range(start, end, conn=None):
+    def execute(connection):
+        return connection.execute(
+            text("""
+                SELECT *
+                FROM kalender_dawuh
+                WHERE ("Tahun", "Bulan", "Tanggal")
+                      BETWEEN (:start_year, :start_month, :start_day)
+                          AND (:end_year, :end_month, :end_day)
+                ORDER BY "Tahun", "Bulan", "Tanggal"
+            """),
+            {
+                "start_year": start.year,
+                "start_month": start.month,
+                "start_day": start.day,
+                "end_year": end.year,
+                "end_month": end.month,
+                "end_day": end.day,
+            },
+        )
+
+    if conn is not None:
+        return [dict(row._mapping) for row in execute(conn)]
+
+    with engine.connect() as conn:
+        return [dict(row._mapping) for row in execute(conn)]
+
+
+def get_kalender_row_by_date(target, conn=None):
+    def execute(connection):
+        return connection.execute(
+            text("""
+                SELECT *
+                FROM kalender_dawuh
+                WHERE "Tahun" = :tahun
+                  AND "Bulan" = :bulan
+                  AND "Tanggal" = :tanggal
+            """),
+            {
+                "tahun": target.year,
+                "bulan": target.month,
+                "tanggal": target.day,
+            },
+        ).mappings().first()
+
+    if conn is not None:
+        row = execute(conn)
+        return dict(row) if row else None
+
+    with engine.connect() as conn:
+        row = execute(conn)
+
+        return dict(row) if row else None
+
+
+def get_kalender_rows_by_month(tahun, bulan, conn=None):
+    def execute(connection):
+        return connection.execute(
+            text("""
+                SELECT *
+                FROM kalender_dawuh
+                WHERE "Tahun" = :tahun
+                  AND "Bulan" = :bulan
+                ORDER BY "Tanggal"
+            """),
+            {
+                "tahun": tahun,
+                "bulan": bulan,
+            },
+        )
+
+    if conn is not None:
+        return [dict(row._mapping) for row in execute(conn)]
+
+    with engine.connect() as conn:
+        return [dict(row._mapping) for row in execute(conn)]
+
+
+def get_makna_rows(conn):
+    result = conn.execute(
+        text("""
+            SELECT *
+            FROM tambahan
+        """)
+    )
+
+    return [dict(row._mapping) for row in result]
+
+
 def get_deskripsi(makna_rows, col_nama, col_makna, target_val):
     if target_val == "-":
         return "-"
@@ -201,7 +290,7 @@ def parse_row(row, makna_rows):
 
         "pakakalan": gv(row, "Pakakalan"),
         "baik_buruk_hari": gv(row, "InformasiPakakalan"),
-        "dawuh": gv(row, "dawuh"),
+        "dawuh": gv(row, "Dawuh"),
 
         "status_purnama": status_purnama,
         "karakter_kelahiran": build_karakter_kelahiran(row, makna_rows),
@@ -215,20 +304,14 @@ def generate_kalender_range(start_date, end_date):
     if end < start:
         raise ValueError("Tanggal akhir tidak boleh lebih kecil dari tanggal awal")
 
-    kalender_rows = get_all_kalender()
-    makna_rows = get_all_makna()
+    with engine.connect() as conn:
+        kalender_rows = get_kalender_rows_by_range(start, end, conn)
+        makna_rows = get_makna_rows(conn)
 
     hasil = []
 
     for row in kalender_rows:
-        row_date = datetime(
-            int(row["Tahun"]),
-            int(row["Bulan"]),
-            int(row["Tanggal"]),
-        ).date()
-
-        if start <= row_date <= end:
-            hasil.append(parse_row(row, makna_rows))
+        hasil.append(parse_row(row, makna_rows))
 
     hasil.sort(key=lambda item: (item["tahun"], item["bulan"], item["tanggal"]))
 
@@ -238,32 +321,19 @@ def generate_kalender_range(start_date, end_date):
 def get_kalender_by_date(tanggal):
     target = datetime.strptime(tanggal, "%Y-%m-%d").date()
 
-    kalender_rows = get_all_kalender()
-    makna_rows = get_all_makna()
+    with engine.connect() as conn:
+        row = get_kalender_row_by_date(target, conn)
+        makna_rows = get_makna_rows(conn)
 
-    for row in kalender_rows:
-        row_date = datetime(
-            int(row["Tahun"]),
-            int(row["Bulan"]),
-            int(row["Tanggal"]),
-        ).date()
-
-        if row_date == target:
-            return parse_row(row, makna_rows)
-
-    return None
+    return parse_row(row, makna_rows) if row else None
 
 
 def get_kalender_by_month(tahun, bulan):
-    kalender_rows = get_all_kalender()
-    makna_rows = get_all_makna()
+    with engine.connect() as conn:
+        kalender_rows = get_kalender_rows_by_month(tahun, bulan, conn)
+        makna_rows = get_makna_rows(conn)
 
-    hasil = []
-
-    for row in kalender_rows:
-        if int(row["Tahun"]) == int(tahun) and int(row["Bulan"]) == int(bulan):
-            hasil.append(parse_row(row, makna_rows))
-
+    hasil = [parse_row(row, makna_rows) for row in kalender_rows]
     hasil.sort(key=lambda item: item["tanggal"])
 
     return hasil

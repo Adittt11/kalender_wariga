@@ -18,7 +18,6 @@ def generate_kalender(payload: GenerateRequest):
             payload.start_date,
             payload.end_date
         )
-
         return {
             "success": True,
             "message": "Kalender berhasil digenerate",
@@ -26,8 +25,8 @@ def generate_kalender(payload: GenerateRequest):
             "data": data,
         }
 
-    except Exception as error:
+    except (RuntimeError, ValueError) as error:
         raise HTTPException(
-            status_code=400,
+            status_code=503 if isinstance(error, RuntimeError) else 400,
             detail=str(error)
-        )
+        ) from error

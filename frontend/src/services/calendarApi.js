@@ -15,6 +15,11 @@ export async function generateCharacterAi(date) {
   return response.data;
 }
 
+export async function generatePrintAi(date) {
+  const response = await api.post(`/api/calendar/date/${date}/print-ai`);
+  return response.data;
+}
+
 export async function generateCalendar(startDate, endDate) {
   const response = await api.post("/api/generate/kalender", {
     start_date: startDate,

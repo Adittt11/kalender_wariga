@@ -81,6 +81,61 @@ def generate_karakter_kelahiran_ai(calendar_data):
     )
 
 
+def generate_cetak_kalender_ai(calendar_data):
+    prompt = (
+        "Buat keluaran JSON valid tanpa markdown berdasarkan data Wariga Bali "
+        "berikut. Jangan mengarang dan jangan menghilangkan makna penting. "
+        "Gunakan format persis: "
+        '{"karakter_kelahiran":"satu paragraf","hal_baik":["poin"],'
+        '"hal_dihindari":["poin"]}. '
+        "Untuk karakter_kelahiran, ringkas dan parafrase menjadi satu paragraf "
+        "padat maksimal 110 kata yang mengalir. Kalimat awalnya mulai dengan: "
+        f"Seorang dengan kelahiran palalintangan {calendar_data['palalintangan']}. "
+        "Jangan menggunakan kata pengantar atau frasa 'menurut dataset'. "
+        "Untuk hal_baik dan hal_dihindari, ringkas informasi pakakalan menjadi "
+        "maksimal 4 poin pendek pada masing-masing daftar. Jika tidak ada data, "
+        "gunakan daftar kosong. "
+        f"Teks karakter: {calendar_data['karakter_kelahiran']} "
+        f"Informasi pakakalan: {calendar_data['baik_buruk_hari']}"
+    )
+    response = request_groq(
+        [
+            {
+                "role": "system",
+                "content": (
+                    "Anda merangkum data kalender Wariga Bali secara akurat. "
+                    "Balas hanya dengan JSON valid."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        max_completion_tokens=700,
+        temperature=0.2,
+    )
+
+    try:
+        result = json.loads(response)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Respons ringkasan Groq bukan JSON valid") from error
+
+    return {
+        "karakter_kelahiran": str(result.get("karakter_kelahiran", "")).strip(),
+        "hal_baik": [
+            str(item).strip()
+            for item in result.get("hal_baik", [])
+            if str(item).strip()
+        ][:4],
+        "hal_dihindari": [
+            str(item).strip()
+            for item in result.get("hal_dihindari", [])
+            if str(item).strip()
+        ][:4],
+    }
+
+
 def chat_wariga(messages, database_context):
     safe_messages = [
         {

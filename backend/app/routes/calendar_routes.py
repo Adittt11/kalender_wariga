@@ -4,7 +4,10 @@ from app.services.kalender_service import (
     get_kalender_by_date,
     get_kalender_by_month,
 )
-from app.services.groq_service import generate_karakter_kelahiran_ai
+from app.services.groq_service import (
+    generate_cetak_kalender_ai,
+    generate_karakter_kelahiran_ai,
+)
 
 router = APIRouter()
 
@@ -61,4 +64,28 @@ def calendar_character_ai(tanggal: str):
             "model": "groq",
             "karakter_kelahiran_ai": character,
         },
+    }
+
+
+@router.post("/date/{tanggal}/print-ai")
+def calendar_print_ai(tanggal: str):
+    data = get_kalender_by_date(tanggal)
+
+    if data is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Data kalender tidak ditemukan"
+        )
+
+    try:
+        summary = generate_cetak_kalender_ai(data)
+    except (RuntimeError, ValueError) as error:
+        raise HTTPException(
+            status_code=503,
+            detail=str(error)
+        ) from error
+
+    return {
+        "success": True,
+        "data": summary,
     }

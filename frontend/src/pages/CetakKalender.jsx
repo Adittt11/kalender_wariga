@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
-import { CalendarDays, CheckSquare, Printer } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarDays, CheckSquare, CircleCheck, CircleX, Printer } from "lucide-react";
 import { toPng } from "html-to-image";
 import DownloadCard from "../components/DownloadCard";
-import { generateCalendar } from "../services/calendarApi";
+import { generateCalendar, generatePrintAi } from "../services/calendarApi";
 import ornament from "../assets/ornamen.png";
 
 const initialStartDate = "1900-01-01";
@@ -29,18 +29,6 @@ function splitValues(value, separator) {
     .split(separator)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function cleanDayInformation(value) {
-  if (!value || value === "-") {
-    return "Tidak ada informasi khusus untuk hari ini.";
-  }
-
-  return value
-    .replace(/,?\s*Wewaran penyusun:[^;]+;?/gi, " ")
-    .replace(/\.,/g, ". ")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function OrnamentDivider() {
@@ -139,6 +127,11 @@ function PrintableCalendar({ calendarRef, data }) {
         </div>
 
         <section className="print-calendar-section">
+          <h2>Karakter Kelahiran</h2>
+          <p>{data.karakter_kelahiran}</p>
+        </section>
+
+        <section className="print-calendar-section">
           <h2>Pakakalan</h2>
           <div className="print-calendar-tags">
             {pakakalan.map((item) => <span key={item}>{item}</span>)}
@@ -147,7 +140,22 @@ function PrintableCalendar({ calendarRef, data }) {
 
         <section className="print-calendar-section">
           <h2>Baik Buruk Hari</h2>
-          <p>{cleanDayInformation(data.baik_buruk_hari)}</p>
+          <div className="print-day-guidance">
+            <div className="print-day-guidance-good">
+              <h3><CircleCheck size={15} /> Hal yang Baik</h3>
+              <ul>
+                {(data.hal_baik || []).map((item) => <li key={item}>{item}</li>)}
+                {!data.hal_baik?.length && <li>Tidak ada informasi khusus.</li>}
+              </ul>
+            </div>
+            <div className="print-day-guidance-avoid">
+              <h3><CircleX size={15} /> Hal yang Harus Dihindari</h3>
+              <ul>
+                {(data.hal_dihindari || []).map((item) => <li key={item}>{item}</li>)}
+                {!data.hal_dihindari?.length && <li>Tidak ada informasi khusus.</li>}
+              </ul>
+            </div>
+          </div>
         </section>
 
         <section className="print-calendar-section">
@@ -175,10 +183,75 @@ export default function CetakKalender() {
   const [loading, setLoading] = useState(false);
   const [downloadingPng, setDownloadingPng] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [loadingAi, setLoadingAi] = useState(false);
   const [error, setError] = useState("");
   const calendarRef = useRef(null);
+  const aiCacheRef = useRef({});
 
   const preview = calendarData[activeIndex];
+
+  useEffect(() => {
+    if (!preview || preview.ai_ready) {
+      return;
+    }
+
+    const cachedPreview = aiCacheRef.current[preview.tanggal_lengkap];
+
+    if (cachedPreview) {
+      setCalendarData((current) =>
+        current.map((item) =>
+          item.tanggal_lengkap === preview.tanggal_lengkap
+            ? cachedPreview
+            : item
+        )
+      );
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadPreviewAi() {
+      setLoadingAi(true);
+
+      try {
+        const response = await generatePrintAi(preview.tanggal_lengkap);
+        const enrichedPreview = {
+          ...preview,
+          ...response.data,
+          ai_ready: true,
+        };
+        aiCacheRef.current[preview.tanggal_lengkap] = enrichedPreview;
+
+        if (!cancelled) {
+          setCalendarData((current) =>
+            current.map((item) =>
+              item.tanggal_lengkap === preview.tanggal_lengkap
+                ? enrichedPreview
+                : item
+            )
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err.response?.data?.detail ||
+              err.message ||
+              "Ringkasan AI kalender gagal dibuat."
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingAi(false);
+        }
+      }
+    }
+
+    loadPreviewAi();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preview]);
 
   async function handleGenerate(event) {
     event.preventDefault();
@@ -189,6 +262,7 @@ export default function CetakKalender() {
       const response = await generateCalendar(startDate, endDate);
       setCalendarData(response.data || []);
       setActiveIndex(0);
+      aiCacheRef.current = {};
 
       if (!response.data?.length) {
         setError("Data kalender untuk rentang tanggal tersebut tidak ditemukan.");
@@ -336,7 +410,14 @@ export default function CetakKalender() {
                 preview dari backend.
               </div>
             ) : (
-              <PrintableCalendar calendarRef={calendarRef} data={preview} />
+              <>
+                {loadingAi && (
+                  <div className="mb-3 rounded-xl bg-baliSoft p-3 text-center text-xs font-semibold text-baliBrown">
+                    Menyusun ringkasan karakter dan baik-buruk hari dengan AI...
+                  </div>
+                )}
+                <PrintableCalendar calendarRef={calendarRef} data={preview} />
+              </>
             )}
           </div>
         </section>
@@ -403,7 +484,7 @@ export default function CetakKalender() {
             className="btn-primary flex w-full items-center justify-center gap-2 disabled:opacity-60"
             type="button"
             onClick={printCalendar}
-            disabled={!preview}
+            disabled={!preview || loadingAi || !preview.ai_ready}
           >
             <Printer size={18} />
             Cetak Preview
@@ -415,14 +496,14 @@ export default function CetakKalender() {
               <DownloadCard
                 type="PDF"
                 description="Unduh sebagai dokumen siap cetak yang rapi dan profesional."
-                disabled={!preview}
                 loading={downloadingPdf}
+                disabled={!preview || loadingAi || !preview.ai_ready}
                 onDownload={downloadPdf}
               />
               <DownloadCard
                 type="PNG"
                 description="Unduh sebagai gambar kalender beresolusi tinggi."
-                disabled={!preview}
+                disabled={!preview || loadingAi || !preview.ai_ready}
                 loading={downloadingPng}
                 onDownload={downloadPng}
               />

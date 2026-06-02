@@ -1,24 +1,79 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, Moon, Sparkles, X } from "lucide-react";
+import { ArrowRight, Bot, CalendarDays, Clock3, Moon, Scale, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 import CalendarCard from "../components/CalendarCard";
 import { getDashboardCalendarByDate } from "../services/calendarApi";
 
-function DetailRow({ label, value }) {
+const initialDate = "1900-01-01";
+
+function splitValues(value, separator) {
+  if (!value || value === "-") {
+    return [];
+  }
+
+  return value.split(separator).map((item) => item.trim()).filter(Boolean);
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("id-ID", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00`));
+}
+
+function InfoRows({ detail }) {
+  const rows = [
+    ["Ingkel", detail.ingkel, "Sasih", detail.sasih],
+    ["Wuku", detail.wuku, detail.label_lunar, detail.nilai_lunar],
+    ["Ekawara", detail.ekawara, "Sadwara", detail.sadwara],
+    ["Dwiwara", detail.dwiwara, "Saptawara", detail.saptawara],
+    ["Triwara", detail.triwara, "Astawara", detail.astawara],
+    ["Caturwara", detail.caturwara, "Sangawara", detail.sangawara],
+    ["Pancawara", detail.pancawara, "Dasawara", detail.dasawara],
+    ["Ekajalarsi", detail.ekajalarsi, "Pararasan", detail.pararasan],
+    ["Palalintangan", detail.palalintangan, "Pratiti Samutpada", detail.pratiti_samutpada],
+  ];
+
   return (
-    <div className="rounded-xl bg-baliSoft p-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-baliBrown">{value || "-"}</p>
+    <div className="dashboard-info-rows">
+      {rows.map((row, index) => (
+        <div className={index === 2 || index === 7 ? "dashboard-info-row dashboard-info-separator" : "dashboard-info-row"} key={row[0]}>
+          <span>{row[0]}</span><strong>{row[1] || "-"}</strong>
+          <span>{row[2]}</span><strong>{row[3] || "-"}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LunarStatus({ status }) {
+  if (!status || status === "-") {
+    return null;
+  }
+
+  const tilem = status.toLowerCase().includes("tilem");
+
+  return (
+    <div className={`dashboard-status ${tilem ? "dashboard-status-tilem" : "dashboard-status-purnama"}`}>
+      {tilem ? <Moon size={16} /> : <Sparkles size={16} />}
+      Hari {status}
     </div>
   );
 }
 
 export default function Dashboard() {
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(initialDate);
   const [detail, setDetail] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
 
-  async function selectDate(date) {
+  async function loadDate(date) {
     setSelectedDate(date);
     setLoadingDetail(true);
     setError("");
@@ -31,110 +86,79 @@ export default function Dashboard() {
       setError(
         err.response?.data?.detail ||
           err.message ||
-          "Detail kalender Bali tidak dapat dimuat."
+          "Detail kalender Dawuh tidak dapat dimuat."
       );
     } finally {
       setLoadingDetail(false);
     }
   }
 
-  function closeModal() {
-    setSelectedDate("");
-    setDetail(null);
-    setError("");
-  }
-
-  const modalOpen = Boolean(selectedDate);
-
   useEffect(() => {
-    function closeOnEscape(event) {
-      if (event.key === "Escape") {
-        closeModal();
-      }
-    }
+    loadDate(initialDate);
+  }, []);
 
-    if (modalOpen) {
-      document.addEventListener("keydown", closeOnEscape);
-    }
-
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [modalOpen]);
+  const goodTimes = splitValues(detail?.dawuh, "|");
 
   return (
-    <div className="min-h-[calc(100vh-120px)] rounded-3xl bg-[#FFF7ED] p-4 sm:p-6">
-      <CalendarCard onSelectDate={selectDate} selectedDate={selectedDate} />
-
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm"
-          onClick={closeModal}
-        >
-          <section
-            className="max-h-[88vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-baliBorder bg-white p-5 shadow-2xl sm:p-7"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-baliBorder pb-5">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-baliBrown">Detail Kalender Bali</p>
-                <h2 className="mt-2 text-2xl font-bold text-baliDark">{selectedDate}</h2>
-                {detail && (
-                  <p className="mt-1 text-sm text-gray-500">{detail.saptawara} · {detail.pancawara}</p>
-                )}
-              </div>
-              <button className="calendar-nav-button shrink-0" type="button" onClick={closeModal}>
-                <X size={18} />
-              </button>
+    <div className="dashboard-page">
+      <div className="dashboard-layout">
+        <div className="space-y-5">
+          <Link className="card dashboard-ai-shortcut" to="/tanya-wariga-ai">
+            <div className="dashboard-card-icon"><Bot size={19} /></div>
+            <div>
+              <h2>Tanya Wariga AI</h2>
+              <p>Tanyakan informasi kalender Bali dan Wariga.</p>
             </div>
+            <ArrowRight className="ml-auto" size={20} />
+          </Link>
 
-            {loadingDetail && (
-              <div className="py-16 text-center text-sm text-gray-500">
-                Memuat detail tanggal...
-              </div>
-            )}
+          <CalendarCard onSelectDate={loadDate} selectedDate={selectedDate} />
 
-            {error && (
-              <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</div>
-            )}
-
-            {detail && !loadingDetail && (
-              <>
-                {detail.status_purnama !== "-" && (
-                  <div className={`mt-5 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold ${
-                    detail.status_purnama.toLowerCase().includes("tilem")
-                      ? "bg-gray-900 text-white"
-                      : "bg-red-50 text-red-700"
-                  }`}>
-                    {detail.status_purnama.toLowerCase().includes("tilem") ? <Moon size={18} /> : <Sparkles size={18} />}
-                    Hari {detail.status_purnama}
-                  </div>
-                )}
-
-                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <DetailRow label="Wuku" value={detail.wuku} />
-                  <DetailRow label="Ingkel" value={detail.ingkel} />
-                  <DetailRow label="Sasih" value={detail.sasih} />
-                  <DetailRow label={detail.label_lunar} value={detail.nilai_lunar} />
-                  <DetailRow label="Ekawara" value={detail.ekawara} />
-                  <DetailRow label="Dwiwara" value={detail.dwiwara} />
-                  <DetailRow label="Triwara" value={detail.triwara} />
-                  <DetailRow label="Caturwara" value={detail.caturwara} />
-                  <DetailRow label="Pancawara" value={detail.pancawara} />
-                  <DetailRow label="Sadwara" value={detail.sadwara} />
-                  <DetailRow label="Saptawara" value={detail.saptawara} />
-                  <DetailRow label="Astawara" value={detail.astawara} />
-                  <DetailRow label="Sangawara" value={detail.sangawara} />
-                  <DetailRow label="Dasawara" value={detail.dasawara} />
-                </div>
-
-                <div className="mt-5 flex items-center gap-2 text-xs text-gray-500">
-                  <CalendarDays size={15} />
-                  Data detail diambil dari tabel kalender_bali.
-                </div>
-              </>
-            )}
+          <section className="card dashboard-data-card">
+            <div className="dashboard-card-heading">
+              <div className="dashboard-card-icon"><Clock3 size={19} /></div>
+              <h2>Waktu Baik</h2>
+            </div>
+            <div className="dashboard-time-tags">
+              {goodTimes.length
+                ? goodTimes.map((item) => <span key={item}>{item}</span>)
+                : <p>Tidak ada waktu khusus.</p>}
+            </div>
           </section>
         </div>
-      )}
+
+        <div className="space-y-5">
+          <section className="card dashboard-info-card">
+            <div className="dashboard-info-heading">
+              <div className="dashboard-card-heading">
+                <div className="dashboard-card-icon"><CalendarDays size={19} /></div>
+                <h2>Informasi Kalender</h2>
+              </div>
+              <strong>{formatDate(selectedDate)}</strong>
+            </div>
+            {loadingDetail ? (
+              <p className="py-12 text-center text-sm text-gray-500">Memuat informasi...</p>
+            ) : detail ? (
+              <>
+                <LunarStatus status={detail.status_purnama} />
+                <InfoRows detail={detail} />
+              </>
+            ) : (
+              <p className="py-12 text-center text-sm text-gray-500">{error}</p>
+            )}
+          </section>
+
+          <section className="card dashboard-data-card dashboard-dewasa-card">
+            <div className="dashboard-card-heading">
+              <div className="dashboard-card-icon"><Scale size={19} /></div>
+              <h2>Ala - Ayu Dewasa</h2>
+            </div>
+            <p><strong>Pakakalan:</strong> {detail?.pakakalan || "-"}</p>
+            <p className="mt-3 text-gray-600">{detail?.baik_buruk_hari || "Tidak ada informasi khusus."}</p>
+          </section>
+        </div>
+      </div>
+
     </div>
   );
 }
