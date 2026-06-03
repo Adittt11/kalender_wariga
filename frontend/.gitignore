@@ -83,3 +83,6 @@ coverage/
 # ===========================
 *.tgz
 *.zip
+echo "frontend/public/data/dewasa_hasil3.json" >> frontend/.gitignore
+echo "frontend/public/dewasa_hasil3.json" >> frontend/.gitignore
+echo "frontend/dist/" >> frontend/.gitignore
