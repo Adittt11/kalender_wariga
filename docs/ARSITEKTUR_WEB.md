@@ -4,6 +4,8 @@
 
 Kalender Bali Wariga adalah aplikasi web untuk menampilkan informasi kalender Bali, data wewaran, dawuh, karakter kelahiran, cetak kalender, Tanya Wariga AI, dan Dewasa Ayu.
 
+Dokumen detail database tersedia di [ARSITEKTUR_DATABASE.md](./ARSITEKTUR_DATABASE.md).
+
 Aplikasi menggunakan arsitektur client-server:
 
 - Frontend: React + Vite untuk tampilan dan interaksi pengguna.
@@ -198,10 +200,10 @@ dashboard_routes.py
    |
 kalender_service.py
    |
-Database
+kalender_dawuh
 ```
 
-Dashboard menggunakan data yang sama dengan kalender, tetapi ditampilkan sebagai ringkasan:
+Dashboard menggunakan data dari tabel `kalender_dawuh`, tetapi ditampilkan sebagai ringkasan:
 
 - Informasi wewaran
 - Sasih
