@@ -60,8 +60,8 @@ def get_kalender_bali_by_month(tahun, bulan):
     with engine.connect() as conn:
         rows = conn.execute(
             text("""
-                SELECT *
-                FROM kalender_bali
+                SELECT *, "Pengelong" AS "Panglong"
+                FROM kalender_dawuh
                 WHERE "Tahun" = :tahun AND "Bulan" = :bulan
                 ORDER BY "Tanggal"
             """),
@@ -77,8 +77,8 @@ def get_kalender_bali_by_date(tanggal):
     with engine.connect() as conn:
         row = conn.execute(
             text("""
-                SELECT *
-                FROM kalender_bali
+                SELECT *, "Pengelong" AS "Panglong"
+                FROM kalender_dawuh
                 WHERE "Tahun" = :tahun
                   AND "Bulan" = :bulan
                   AND "Tanggal" = :tanggal

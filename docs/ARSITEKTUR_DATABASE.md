@@ -8,10 +8,9 @@ Backend mengakses database melalui SQLAlchemy pada file `backend/app/services/da
 Tabel yang digunakan aplikasi:
 
 - `kalender_dawuh`
-- `kalender_bali`
 - `tambahan`
 
-Tiga tabel tersebut dipakai untuk fitur:
+Dua tabel tersebut dipakai untuk fitur:
 
 - Dashboard kalender.
 - Detail kalender per tanggal.
@@ -29,7 +28,7 @@ Ringkasan penggunaan tabel per fitur:
 | Kalender per bulan | `kalender_dawuh` + `tambahan` |
 | Karakter kelahiran | `kalender_dawuh` + `tambahan` |
 | Generate kalender | `kalender_dawuh` + `tambahan` |
-| Tanya Wariga AI | `kalender_dawuh` + `kalender_bali` |
+| Tanya Wariga AI | `kalender_dawuh` |
 
 Catatan: karakter kelahiran dan generate kalender tetap memakai `kalender_dawuh` karena nama karakter harian tersimpan di tabel tersebut, sedangkan tabel `tambahan` dipakai untuk mengambil maknanya.
 
@@ -68,30 +67,6 @@ erDiagram
         text Dawuh
     }
 
-    kalender_bali {
-        int id PK
-        int Tahun
-        int Bulan
-        int Tanggal
-        text Wuku
-        text Ingkel
-        text Sasih
-        text Penanggal
-        text Panglong
-        text Status_Purnama
-        text Status_Mala
-        text Ekawara
-        text Dwiwara
-        text Triwara
-        text Caturwara
-        text Pancawara
-        text Sadwara
-        text Saptawara
-        text Astawara
-        text Sangawara
-        text Dasawara
-    }
-
     tambahan {
         int id PK
         text Palalintangan
@@ -120,6 +95,7 @@ Dipakai oleh:
 - `backend/app/routes/dashboard_routes.py`
 - `backend/app/routes/generate_routes.py`
 - `backend/app/services/chat_context_service.py`
+- `backend/app/services/kalender_bali_service.py`
 
 Fungsi utama:
 
@@ -189,66 +165,7 @@ WHERE ("Tahun", "Bulan", "Tanggal")
 ORDER BY "Tahun", "Bulan", "Tanggal";
 ```
 
-## 4. Tabel `kalender_bali`
-
-Tabel `kalender_bali` menyimpan data kalender Bali dasar.
-
-Dipakai oleh:
-
-- `backend/app/services/kalender_bali_service.py`
-- `backend/app/services/chat_context_service.py`
-
-Fungsi utama:
-
-- Mengambil kalender Bali berdasarkan tanggal.
-- Mengambil kalender Bali berdasarkan bulan.
-- Menjadi konteks tambahan untuk Tanya Wariga AI.
-
-Struktur kolom:
-
-| Kolom | Tipe | Keterangan |
-| --- | --- | --- |
-| `id` | `bigserial` | Primary key. |
-| `Tahun` | `integer` | Tahun masehi. |
-| `Bulan` | `integer` | Bulan masehi. |
-| `Tanggal` | `integer` | Tanggal masehi. |
-| `Wuku` | `text` | Nama wuku. |
-| `Ingkel` | `text` | Nama ingkel. |
-| `Sasih` | `text` | Nama sasih. |
-| `Penanggal` | `text` | Nilai penanggal. |
-| `Panglong` | `text` | Nilai panglong. |
-| `Status_Purnama` | `text` | Status Purnama atau Tilem. |
-| `Status_Mala` | `text` | Status mala. |
-| `Ekawara` | `text` | Data ekawara. |
-| `Dwiwara` | `text` | Data dwiwara. |
-| `Triwara` | `text` | Data triwara. |
-| `Caturwara` | `text` | Data caturwara. |
-| `Pancawara` | `text` | Data pancawara. |
-| `Sadwara` | `text` | Data sadwara. |
-| `Saptawara` | `text` | Data saptawara. |
-| `Astawara` | `text` | Data astawara. |
-| `Sangawara` | `text` | Data sangawara. |
-| `Dasawara` | `text` | Data dasawara. |
-
-Query utama yang dipakai backend:
-
-```sql
-SELECT *
-FROM kalender_bali
-WHERE "Tahun" = :tahun
-  AND "Bulan" = :bulan
-  AND "Tanggal" = :tanggal;
-```
-
-```sql
-SELECT *
-FROM kalender_bali
-WHERE "Tahun" = :tahun
-  AND "Bulan" = :bulan
-ORDER BY "Tanggal";
-```
-
-## 5. Tabel `tambahan`
+## 4. Tabel `tambahan`
 
 Tabel `tambahan` menyimpan makna dari data karakter kelahiran.
 
@@ -287,7 +204,7 @@ FROM tambahan;
 
 Backend mengambil semua baris dari `tambahan`, lalu mencocokkan nama karakter dengan data dari `kalender_dawuh`.
 
-## 6. Alur Data Database
+## 5. Alur Data Database
 
 ### Dashboard
 
@@ -356,11 +273,19 @@ TanyaWarigaAI.jsx
   -> POST /api/chat
   -> chat_context_service.py
   -> kalender_dawuh
-  -> kalender_bali
   -> data dipakai sebagai konteks jawaban AI
 ```
 
-## 7. SQL DDL Database yang Dipakai
+### Kalender Bali
+
+```text
+kalender_bali_service.py
+  -> kalender_dawuh
+```
+
+Walaupun nama service-nya `kalender_bali_service.py`, data kalender Bali sekarang diambil dari tabel `kalender_dawuh`, bukan dari tabel `kalender_bali`. Format fungsi tetap dipertahankan; kolom `Pengelong` dari `kalender_dawuh` dibaca sebagai `Panglong` untuk response kalender Bali.
+
+## 6. SQL DDL Database yang Dipakai
 
 ```sql
 CREATE TABLE IF NOT EXISTS kalender_dawuh (
@@ -398,34 +323,6 @@ CREATE TABLE IF NOT EXISTS kalender_dawuh (
 CREATE INDEX IF NOT EXISTS idx_kalender_dawuh_tanggal
 ON kalender_dawuh ("Tahun", "Bulan", "Tanggal");
 
-CREATE TABLE IF NOT EXISTS kalender_bali (
-    id BIGSERIAL PRIMARY KEY,
-    "Tahun" INTEGER NOT NULL,
-    "Bulan" INTEGER NOT NULL,
-    "Tanggal" INTEGER NOT NULL,
-    "Wuku" TEXT,
-    "Ingkel" TEXT,
-    "Sasih" TEXT,
-    "Penanggal" TEXT,
-    "Panglong" TEXT,
-    "Status_Purnama" TEXT,
-    "Status_Mala" TEXT,
-    "Ekawara" TEXT,
-    "Dwiwara" TEXT,
-    "Triwara" TEXT,
-    "Caturwara" TEXT,
-    "Pancawara" TEXT,
-    "Sadwara" TEXT,
-    "Saptawara" TEXT,
-    "Astawara" TEXT,
-    "Sangawara" TEXT,
-    "Dasawara" TEXT,
-    CONSTRAINT kalender_bali_unique_date UNIQUE ("Tahun", "Bulan", "Tanggal")
-);
-
-CREATE INDEX IF NOT EXISTS idx_kalender_bali_tanggal
-ON kalender_bali ("Tahun", "Bulan", "Tanggal");
-
 CREATE TABLE IF NOT EXISTS tambahan (
     id BIGSERIAL PRIMARY KEY,
     "Palalintangan" TEXT,
@@ -439,10 +336,9 @@ CREATE TABLE IF NOT EXISTS tambahan (
 );
 ```
 
-## 8. Ringkasan
+## 7. Ringkasan
 
 | Tabel | Dipakai untuk |
 | --- | --- |
-| `kalender_dawuh` | Dashboard, kalender per tanggal/bulan, generate kalender, dawuh, pakakalan, baik-buruk hari, dan data nama karakter kelahiran. |
-| `kalender_bali` | Data kalender Bali dasar untuk lookup tanggal dan konteks Tanya Wariga AI. |
+| `kalender_dawuh` | Dashboard, kalender Bali, kalender per tanggal/bulan, generate kalender, Tanya Wariga AI, dawuh, pakakalan, baik-buruk hari, dan data nama karakter kelahiran. |
 | `tambahan` | Makna karakter kelahiran yang digabungkan dengan data dari `kalender_dawuh`. |
