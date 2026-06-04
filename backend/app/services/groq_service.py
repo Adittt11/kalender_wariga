@@ -52,15 +52,25 @@ def request_groq(messages, max_completion_tokens=500, temperature=0.4):
 def generate_karakter_kelahiran_ai(calendar_data):
     teks = calendar_data["karakter_kelahiran"]
     palalintangan = calendar_data["palalintangan"]
+    makna_karakter = (
+        "Makna karakter dari database: "
+        f"Palalintangan {calendar_data['palalintangan']}; "
+        f"Ekajalarsi {calendar_data['ekajalarsi']}; "
+        f"Pararasan {calendar_data['pararasan']}; "
+        f"Pratiti Samutpada {calendar_data['pratiti_samutpada']}. "
+        f"Detail makna: {teks}"
+    )
     prompt = (
         "Ringkas dan parafrase teks karakter kelahiran Bali berikut menjadi "
         "satu paragraf yang mengalir. Jangan menghilangkan makna pentingnya "
-        "dan buatkan yang sangat masuk akal tanpa mengarang. Kalimat awalnya "
+        "dan buatkan yang sangat masuk akal tanpa mengarang. Wajib gunakan "
+        "makna Ekajalarsi, Palalintangan, Pararasan, dan Pratiti Samutpada "
+        "yang tersedia pada data. Kalimat awalnya "
         f"mulai dengan: Seorang dengan kelahiran palalintangan {palalintangan}. "
         "Jangan tulis frasa 'menurut dataset'. "
         "TULIS LANGSUNG HASILNYA, dilarang menggunakan kata pengantar seperti "
         "'Berikut adalah', 'Hasilnya adalah', dan sebagainya. "
-        f"Teks: {teks}"
+        f"{makna_karakter}"
     )
 
     return request_groq(
@@ -82,6 +92,14 @@ def generate_karakter_kelahiran_ai(calendar_data):
 
 
 def generate_cetak_kalender_ai(calendar_data):
+    makna_karakter = (
+        "Makna karakter dari database: "
+        f"Palalintangan {calendar_data['palalintangan']}; "
+        f"Ekajalarsi {calendar_data['ekajalarsi']}; "
+        f"Pararasan {calendar_data['pararasan']}; "
+        f"Pratiti Samutpada {calendar_data['pratiti_samutpada']}. "
+        f"Detail makna: {calendar_data['karakter_kelahiran']}"
+    )
     prompt = (
         "Buat keluaran JSON valid tanpa markdown berdasarkan data Wariga Bali "
         "berikut. Jangan mengarang dan jangan menghilangkan makna penting. "
@@ -91,11 +109,13 @@ def generate_cetak_kalender_ai(calendar_data):
         "Untuk karakter_kelahiran, ringkas dan parafrase menjadi satu paragraf "
         "padat maksimal 110 kata yang mengalir. Kalimat awalnya mulai dengan: "
         f"Seorang dengan kelahiran palalintangan {calendar_data['palalintangan']}. "
-        "Jangan menggunakan kata pengantar atau frasa 'menurut dataset'. "
+        "Wajib gunakan makna Ekajalarsi, Palalintangan, Pararasan, dan "
+        "Pratiti Samutpada yang tersedia pada data. Jangan menggunakan kata "
+        "pengantar atau frasa 'menurut dataset'. "
         "Untuk hal_baik dan hal_dihindari, ringkas informasi pakakalan menjadi "
         "maksimal 4 poin pendek pada masing-masing daftar. Jika tidak ada data, "
         "gunakan daftar kosong. "
-        f"Teks karakter: {calendar_data['karakter_kelahiran']} "
+        f"{makna_karakter} "
         f"Informasi pakakalan: {calendar_data['baik_buruk_hari']}"
     )
     response = request_groq(
