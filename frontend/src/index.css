@@ -477,7 +477,8 @@ body {
   margin-bottom: 5px;
 }
 
-.dewasa-select-field select {
+.dewasa-select-field select,
+.dewasa-select-field input {
   appearance: none;
   background: #fffdf9;
   border: 1px solid #eadfd4;
@@ -489,6 +490,10 @@ body {
   outline: none;
   padding: 0 34px 0 12px;
   width: 100%;
+}
+
+.dewasa-select-field input {
+  padding-right: 12px;
 }
 
 .dewasa-select-field > svg {
@@ -1114,7 +1119,8 @@ body {
 
 [data-theme="dark"] .dewasa-pill,
 [data-theme="dark"] .dewasa-time-toggle button,
-[data-theme="dark"] .dewasa-select-field select {
+[data-theme="dark"] .dewasa-select-field select,
+[data-theme="dark"] .dewasa-select-field input {
   background: #201a18;
   border-color: #44352f;
   color: #f6eee8;

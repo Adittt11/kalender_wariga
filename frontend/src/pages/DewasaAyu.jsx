@@ -47,6 +47,15 @@ function getMonthName(value) {
   return months[monthIndex] || months[0];
 }
 
+function getDateRange(data) {
+  const dates = data.map((day) => day.tanggal).filter(Boolean).sort();
+
+  return {
+    min: dates[0] || "",
+    max: dates[dates.length - 1] || "",
+  };
+}
+
 function getDayTitle(wewaran) {
   return [wewaran?.saptawara, wewaran?.pancawara].filter(Boolean).join(" ") || "-";
 }
@@ -108,7 +117,11 @@ function filterDewasaResults(data, filters) {
   const selectedMonth = String(months.indexOf(filters.month) + 1).padStart(2, "0");
 
   data.forEach((day) => {
-    if (!day.tanggal?.startsWith(`${filters.year}-${selectedMonth}`)) {
+    const isSelectedDay = filters.timeMode === "day" && day.tanggal === filters.date;
+    const isSelectedMonth =
+      filters.timeMode !== "day" && day.tanggal?.startsWith(`${filters.year}-${selectedMonth}`);
+
+    if (!isSelectedDay && !isSelectedMonth) {
       return;
     }
 
@@ -173,6 +186,21 @@ function SelectField({ icon, label, value, onChange, options }) {
   );
 }
 
+function DateField({ max, min, value, onChange }) {
+  return (
+    <label className="dewasa-select-field">
+      <span><CalendarDays size={15} />Tanggal</span>
+      <input
+        max={max}
+        min={min}
+        onChange={(event) => onChange(event.target.value)}
+        type="date"
+        value={value}
+      />
+    </label>
+  );
+}
+
 function ResultColumn({ emptyText, tone, title, items }) {
   return (
     <section className={`dewasa-result-column dewasa-result-${tone}`}>
@@ -203,12 +231,15 @@ export default function DewasaAyu() {
   const [category, setCategory] = useState("Manusa Yadnya");
   const [ceremony, setCeremony] = useState("Pawiwahan");
   const [timeMode, setTimeMode] = useState("month");
+  const [date, setDate] = useState("1900-01-01");
   const [month, setMonth] = useState("Januari");
   const [year, setYear] = useState("1900");
   const [submittedFilters, setSubmittedFilters] = useState({
     category: "Manusa Yadnya",
     ceremony: "Pawiwahan",
+    date: "1900-01-01",
     month: "Januari",
+    timeMode: "month",
     year: "1900",
   });
 
@@ -228,18 +259,22 @@ export default function DewasaAyu() {
         const defaultCeremony = options.ceremonies.includes("Pawiwahan")
           ? "Pawiwahan"
           : options.ceremonies[0] || "Pawiwahan";
+        const defaultDate = json[0]?.tanggal || "1900-01-01";
         const defaultYear = options.years[0] || "1900";
-        const defaultMonth = getMonthName(json[0]?.tanggal);
+        const defaultMonth = getMonthName(defaultDate);
 
         setData(json);
         setCategory(defaultCategory);
         setCeremony(defaultCeremony);
+        setDate(defaultDate);
         setYear(defaultYear);
         setMonth(defaultMonth);
         setSubmittedFilters({
           category: defaultCategory,
           ceremony: defaultCeremony,
+          date: defaultDate,
           month: defaultMonth,
+          timeMode: "month",
           year: defaultYear,
         });
       } catch (err) {
@@ -253,6 +288,7 @@ export default function DewasaAyu() {
   }, []);
 
   const options = useMemo(() => buildOptions(data), [data]);
+  const dateRange = useMemo(() => getDateRange(data), [data]);
 
   const filteredCeremonyOptions = useMemo(() => {
     const ceremonies = new Set();
@@ -280,7 +316,13 @@ export default function DewasaAyu() {
   );
 
   const resultTitle = useMemo(
-    () => `Menampilkan Dewasa Upacara ${submittedFilters.ceremony} Bulan ${submittedFilters.month} Tahun ${submittedFilters.year}`,
+    () => {
+      if (submittedFilters.timeMode === "day") {
+        return `Menampilkan Dewasa Upacara ${submittedFilters.ceremony} Tanggal ${formatDate(submittedFilters.date)}`;
+      }
+
+      return `Menampilkan Dewasa Upacara ${submittedFilters.ceremony} Bulan ${submittedFilters.month} Tahun ${submittedFilters.year}`;
+    },
     [submittedFilters]
   );
 
@@ -322,27 +364,38 @@ export default function DewasaAyu() {
             </button>
           </div>
 
-          <div className="dewasa-select-row">
-            <SelectField
-              icon={<CalendarDays size={15} />}
-              label="Bulan"
-              options={months}
-              value={month}
-              onChange={setMonth}
-            />
-            <SelectField
-              icon={<CalendarDays size={15} />}
-              label="Tahun"
-              options={options.years.length ? options.years : ["1900"]}
-              value={year}
-              onChange={setYear}
-            />
-          </div>
+          {timeMode === "day" ? (
+            <div className="dewasa-select-row">
+              <DateField
+                max={dateRange.max}
+                min={dateRange.min}
+                value={date}
+                onChange={setDate}
+              />
+            </div>
+          ) : (
+            <div className="dewasa-select-row">
+              <SelectField
+                icon={<CalendarDays size={15} />}
+                label="Bulan"
+                options={months}
+                value={month}
+                onChange={setMonth}
+              />
+              <SelectField
+                icon={<CalendarDays size={15} />}
+                label="Tahun"
+                options={options.years.length ? options.years : ["1900"]}
+                value={year}
+                onChange={setYear}
+              />
+            </div>
+          )}
 
           <button
             className="dewasa-submit-button"
             disabled={loadingData}
-            onClick={() => setSubmittedFilters({ category, ceremony, month, year })}
+            onClick={() => setSubmittedFilters({ category, ceremony, date, month, timeMode, year })}
             type="button"
           >
             <Search size={15} />
