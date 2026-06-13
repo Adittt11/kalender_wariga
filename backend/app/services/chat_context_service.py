@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app.services.kalender_bali_service import get_kalender_bali_by_date
 from app.services.kalender_service import get_kalender_by_date
+from app.services.knowledge_service import build_knowledge_context
 
 
 DATE_PATTERN = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
@@ -39,6 +40,15 @@ CALENDAR_KEYWORDS = (
     "pararasan",
     "ekajalarsi",
     "pratiti",
+    "penglukatan",
+    "melukat",
+    "pembayuhan",
+    "bayuh",
+    "tenung",
+    "permata",
+    "lontar",
+    "pengetahuan",
+    "knowledge",
 )
 
 
@@ -72,13 +82,23 @@ def is_calendar_question(messages):
 
 
 def build_chat_database_context(messages):
+    latest_user_message = next(
+        (
+            message["content"]
+            for message in reversed(messages)
+            if message["role"] == "user"
+        ),
+        "",
+    )
     tanggal = extract_latest_date(messages)
+    knowledge_context = build_knowledge_context(latest_user_message)
 
     if not tanggal:
         return (
             "Tidak ada tanggal spesifik yang disebutkan pengguna. Jika jawaban "
             "membutuhkan data kalender, minta pengguna menulis tanggal dengan "
-            "format YYYY-MM-DD."
+            "format YYYY-MM-DD.\n\n"
+            f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
         )
 
     try:
@@ -107,5 +127,6 @@ def build_chat_database_context(messages):
         "Gunakan data database berikut sebagai sumber utama untuk menjawab "
         "pertanyaan tentang tanggal tersebut. Jika suatu informasi tidak ada, "
         "katakan bahwa datanya tidak tersedia. Jangan mengarang.\n"
-        f"{json.dumps(context, ensure_ascii=False)}"
+        f"{json.dumps(context, ensure_ascii=False)}\n\n"
+        f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
     )

@@ -14,3 +14,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", ADMIN_PASSWORD or "admin-secret")

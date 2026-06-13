@@ -1027,6 +1027,7 @@ body {
 [data-theme="dark"] .card,
 [data-theme="dark"] section.bg-white,
 [data-theme="dark"] div.bg-white,
+[data-theme="dark"] article.bg-white,
 [data-theme="dark"] button.bg-white,
 [data-theme="dark"] label.bg-white {
   background-color: #302722;
@@ -1324,6 +1325,14 @@ body {
 
 [data-theme="dark"] .bg-red-50 {
   background-color: #4a2624;
+}
+
+[data-theme="dark"] .bg-green-50 {
+  background-color: #223b2b;
+}
+
+[data-theme="dark"] .text-green-700 {
+  color: #a8e0b7;
 }
 
 [data-theme="dark"] .text-red-700,

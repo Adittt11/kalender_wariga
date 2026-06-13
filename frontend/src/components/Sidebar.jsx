@@ -6,7 +6,8 @@ import {
   Sun,
   Printer,
   Droplet,
-  HeartHandshake
+  HeartHandshake,
+  UploadCloud
 } from "lucide-react";
 
 import ornamen from "../assets/ornamen.png";
@@ -19,7 +20,8 @@ const menus = [
   { label: "Dewasa Ayu", path: "/dewasa-ayu", icon: Sun },
   { label: "Pertemuan Lanang Istri", path: "/pertemuan-lanang-istri", icon: HeartHandshake },
   { label: "Cetak Kalender", path: "/cetak-kalender", icon: Printer },
-  { label: "Penglukatan", path: "/penglukatan", icon: Droplet }
+  { label: "Penglukatan", path: "/penglukatan", icon: Droplet },
+  { label: "Admin Knowledge", path: "/admin-knowledge", icon: UploadCloud }
 ];
 
 export default function Sidebar({ open, onClose }) {

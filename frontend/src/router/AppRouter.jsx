@@ -7,6 +7,9 @@ import KarakterKelahiran from "../pages/KarakterKelahiran";
 import DewasaAyu from "../pages/DewasaAyu";
 import Penglukatan from "../pages/Penglukatan";
 import PertemuanLanangIstri from "../pages/PertemuanLanangIstri";
+import AdminKnowledge from "../pages/AdminKnowledge";
+import AdminLogin from "../pages/AdminLogin";
+import RequireAdmin from "../components/RequireAdmin";
 
 export default function AppRouter() {
   return (
@@ -20,6 +23,15 @@ export default function AppRouter() {
           <Route path="/pertemuan-lanang-istri" element={<PertemuanLanangIstri />} />
           <Route path="/cetak-kalender" element={<CetakKalender />} />
           <Route path="/penglukatan" element={<Penglukatan />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route
+            path="/admin-knowledge"
+            element={
+              <RequireAdmin>
+                <AdminKnowledge />
+              </RequireAdmin>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>

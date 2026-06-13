@@ -6,3 +6,6 @@ pydantic
 psycopg2-binary
 sqlalchemy
 certifi
+python-multipart
+pypdf
+openpyxl

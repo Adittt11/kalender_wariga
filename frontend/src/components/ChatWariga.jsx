@@ -6,7 +6,7 @@ const initialMessages = [
   {
     role: "assistant",
     content:
-      "Om swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, atau pakakalan. Untuk detail dari database, sertakan tanggal dengan format YYYY-MM-DD.",
+      "Om swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, Permata, dan Lontar. Untuk detail kalender dari database, sertakan tanggal dengan format YYYY-MM-DD.",
   },
 ];
 
