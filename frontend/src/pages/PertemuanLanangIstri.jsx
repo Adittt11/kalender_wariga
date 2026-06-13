@@ -314,32 +314,42 @@ export default function PertemuanLanangIstri() {
             className="grid w-full gap-3 rounded-2xl bg-white/10 p-4 backdrop-blur-sm sm:grid-cols-[1fr_1fr_auto] xl:max-w-3xl"
             onSubmit={handleSubmit}
           >
-            <label className="flex items-center gap-3 rounded-xl bg-white px-4 text-baliDark">
-              <UserRound size={19} className="text-baliBrown" />
-              <span className="sr-only">Tanggal lahir lanang</span>
-              <input
-                className="w-full bg-transparent py-3 text-sm outline-none"
-                onChange={(event) => setTanggalLanang(event.target.value)}
-                required
-                type="date"
-                value={tanggalLanang}
-              />
-            </label>
+            <div>
+              <p className="mb-2 flex items-center gap-2 text-xs font-bold text-white/90">
+                <UserRound size={15} />
+                Laki-laki
+              </p>
+              <label className="flex items-center rounded-xl bg-white px-4 text-baliDark">
+                <span className="sr-only">Tanggal lahir laki-laki</span>
+                <input
+                  className="w-full bg-transparent py-3 text-sm outline-none"
+                  onChange={(event) => setTanggalLanang(event.target.value)}
+                  required
+                  type="date"
+                  value={tanggalLanang}
+                />
+              </label>
+            </div>
 
-            <label className="flex items-center gap-3 rounded-xl bg-white px-4 text-baliDark">
-              <UsersRound size={19} className="text-baliBrown" />
-              <span className="sr-only">Tanggal lahir istri</span>
-              <input
-                className="w-full bg-transparent py-3 text-sm outline-none"
-                onChange={(event) => setTanggalIstri(event.target.value)}
-                required
-                type="date"
-                value={tanggalIstri}
-              />
-            </label>
+            <div>
+              <p className="mb-2 flex items-center gap-2 text-xs font-bold text-white/90">
+                <UsersRound size={15} />
+                Perempuan
+              </p>
+              <label className="flex items-center rounded-xl bg-white px-4 text-baliDark">
+                <span className="sr-only">Tanggal lahir perempuan</span>
+                <input
+                  className="w-full bg-transparent py-3 text-sm outline-none"
+                  onChange={(event) => setTanggalIstri(event.target.value)}
+                  required
+                  type="date"
+                  value={tanggalIstri}
+                />
+              </label>
+            </div>
 
             <button
-              className="flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-baliBrown transition hover:bg-baliSoft disabled:opacity-60"
+              className="flex h-[46px] min-w-[118px] items-center justify-center gap-2 self-end justify-self-start rounded-xl bg-white px-4 text-sm font-semibold text-baliBrown transition hover:bg-baliSoft disabled:opacity-60"
               disabled={loading}
               type="submit"
             >
