@@ -229,8 +229,8 @@ body {
 }
 
 .dashboard-lunar-purnama {
-  background: #e5c697;
-  color: #6b391b;
+  background: #d93a32;
+  color: #ffffff;
 }
 
 .dashboard-data-card,
@@ -1206,6 +1206,73 @@ body {
   color: #d2c3b8;
 }
 
+[data-theme="dark"] .dashboard-info-row strong {
+  color: #fff4e9;
+  font-weight: 800;
+}
+
+[data-theme="dark"] .dashboard-info-row span {
+  color: #e2cdbd;
+}
+
+[data-theme="dark"] .dashboard-info-separator {
+  border-top-color: #6b574b;
+}
+
+[data-theme="dark"] .dashboard-dewasa-list article {
+  background: #332923;
+  border-color: #6b574b;
+}
+
+[data-theme="dark"] .dashboard-dewasa-list h3 {
+  color: #ffd89f;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+[data-theme="dark"] .dashboard-dewasa-list article p,
+[data-theme="dark"] .dashboard-time-tags p,
+[data-theme="dark"] .dashboard-dewasa-card > p {
+  color: #f0dfd2;
+}
+
+[data-theme="dark"] .pertemuan-result-table {
+  border-color: #6b574b;
+}
+
+[data-theme="dark"] .pertemuan-result-table thead tr {
+  background: #4a382f;
+  color: #fff4e9;
+}
+
+[data-theme="dark"] .pertemuan-result-table tbody tr,
+[data-theme="dark"] .pertemuan-result-table tbody tr:nth-child(odd),
+[data-theme="dark"] .pertemuan-result-table tbody tr:nth-child(even) {
+  background: #2f2722;
+}
+
+[data-theme="dark"] .pertemuan-result-table tbody tr:nth-child(even) {
+  background: #382d27;
+}
+
+[data-theme="dark"] .pertemuan-result-table th,
+[data-theme="dark"] .pertemuan-result-table td {
+  border-color: #6b574b;
+}
+
+[data-theme="dark"] .pertemuan-result-table td,
+[data-theme="dark"] .pertemuan-result-table .text-gray-600,
+[data-theme="dark"] .pertemuan-result-table .text-baliDark,
+[data-theme="dark"] .pertemuan-result-table .text-baliBrown {
+  color: #f3e6da;
+}
+
+[data-theme="dark"] .pertemuan-result-table td:nth-child(1),
+[data-theme="dark"] .pertemuan-result-table td:nth-child(4),
+[data-theme="dark"] .pertemuan-result-table td:nth-child(5) {
+  color: #ffd89f;
+}
+
 [data-theme="dark"] .dashboard-card-icon,
 [data-theme="dark"] .calendar-nav-button {
   background: #43352d;
@@ -1238,6 +1305,16 @@ body {
 [data-theme="dark"] .dashboard-lunar-purnama {
   background: #5a2f2a;
   color: #ffd8ca;
+}
+
+[data-theme="dark"] .dashboard-lunar-tilem {
+  background: #262322;
+  color: #fff;
+}
+
+[data-theme="dark"] .dashboard-lunar-purnama {
+  background: #e0443d;
+  color: #fff;
 }
 
 [data-theme="dark"] .rounded-2xl.bg-\[\#fdfcfb\],
@@ -1552,6 +1629,398 @@ body {
   width: 680px;
 }
 
+.print-match {
+  background: #fffdfb;
+  color: #5a321d;
+  container-type: inline-size;
+  font-family: "Poppins", sans-serif;
+  margin: 0 auto;
+  max-width: 680px;
+  overflow: hidden;
+}
+
+.print-match-frame {
+  border: 5px double #6b391b;
+  box-sizing: border-box;
+  min-height: 960px;
+  overflow: hidden;
+  padding: 4.2cqw 4.8cqw 3.2cqw;
+  position: relative;
+}
+
+.print-match-frame::before,
+.print-match-frame::after {
+  border: solid #6b391b;
+  content: "";
+  height: 35px;
+  position: absolute;
+  width: 35px;
+}
+
+.print-match-frame::before {
+  border-width: 5px 0 0 5px;
+  left: 10px;
+  top: 10px;
+}
+
+.print-match-frame::after {
+  border-width: 0 5px 5px 0;
+  bottom: 10px;
+  right: 10px;
+}
+
+.print-match-kicker {
+  color: #8f6543;
+  font-size: clamp(0.62rem, 1.45cqw, 0.84rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.print-match-title {
+  color: #5a321d;
+  font-family: "Montserrat", sans-serif;
+  font-size: clamp(1.35rem, 4cqw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  margin: 1.2cqw 0 2.4cqw;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.print-match-couple-grid {
+  border-bottom: 2px solid #6b391b;
+  border-top: 2px solid #6b391b;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.print-match-couple-grid section {
+  min-width: 0;
+  padding: 2cqw 2.2cqw;
+}
+
+.print-match-couple-grid section:first-child {
+  border-right: 2px solid #6b391b;
+}
+
+.print-match-couple-grid h2 {
+  font-size: clamp(0.78rem, 2cqw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.print-match-couple-grid section > strong {
+  display: block;
+  font-size: clamp(0.62rem, 1.45cqw, 0.82rem);
+  margin-top: 0.6cqw;
+}
+
+.print-match-couple-grid section > div {
+  display: grid;
+  gap: 0.7cqw 1cqw;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1fr);
+  margin-top: 1.5cqw;
+}
+
+.print-match-couple-grid span,
+.print-match-couple-grid b {
+  font-size: clamp(0.56rem, 1.35cqw, 0.78rem);
+  line-height: 1.25;
+}
+
+.print-match-couple-grid span {
+  color: #80614d;
+  font-weight: 600;
+}
+
+.print-match-couple-grid b {
+  color: #4a2718;
+  overflow-wrap: anywhere;
+}
+
+.print-match-couple-grid p {
+  background: #6b391b;
+  border-radius: 7px;
+  color: white;
+  font-size: clamp(0.58rem, 1.35cqw, 0.8rem);
+  font-weight: 800;
+  margin: 1.8cqw 0 0;
+  padding: 0.9cqw 1.1cqw;
+  text-align: center;
+}
+
+.print-match-total {
+  align-items: center;
+  border-bottom: 2px solid #6b391b;
+  display: flex;
+  justify-content: center;
+  gap: 1.5cqw;
+  padding: 1.5cqw 0;
+  text-align: center;
+}
+
+.print-match-total span {
+  font-size: clamp(0.66rem, 1.55cqw, 0.94rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.print-match-total strong {
+  font-size: clamp(1.25rem, 3.6cqw, 2.25rem);
+}
+
+.print-match-table {
+  border-collapse: collapse;
+  margin-top: 2cqw;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.print-match-table th,
+.print-match-table td {
+  border: 1px solid #9b7356;
+  color: #4a2718;
+  font-size: clamp(0.43rem, 1.1cqw, 0.67rem);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  padding: 0.65cqw 0.72cqw;
+  vertical-align: top;
+}
+
+.print-match-table th {
+  background: #f3e2cd;
+  font-weight: 800;
+  text-align: center;
+}
+
+.print-match-table th:nth-child(1),
+.print-match-table td:nth-child(1) {
+  width: 16%;
+}
+
+.print-match-table th:nth-child(2),
+.print-match-table td:nth-child(2),
+.print-match-table th:nth-child(3),
+.print-match-table td:nth-child(3) {
+  width: 17%;
+}
+
+.print-match-table th:nth-child(4),
+.print-match-table td:nth-child(4) {
+  text-align: center;
+  width: 8%;
+}
+
+.print-match-table th:nth-child(5),
+.print-match-table td:nth-child(5) {
+  width: 12%;
+}
+
+.print-match-table th:nth-child(6),
+.print-match-table td:nth-child(6) {
+  width: 30%;
+}
+
+.print-match-table td:nth-child(4),
+.print-match-table td:nth-child(5) {
+  color: #6b391b;
+  font-weight: 800;
+}
+
+.print-match-note {
+  margin-top: 2cqw;
+  text-align: center;
+}
+
+.print-match-note h2 {
+  border-bottom: 2px solid #6b391b;
+  font-size: clamp(0.78rem, 2cqw, 1.2rem);
+  letter-spacing: 0.08em;
+  margin: 0 0 1.1cqw;
+  padding-bottom: 0.7cqw;
+  text-transform: uppercase;
+}
+
+.print-match-note p {
+  color: #3d251b;
+  font-size: clamp(0.52rem, 1.24cqw, 0.76rem);
+  line-height: 1.45;
+  margin: 0;
+  text-align: justify;
+}
+
+.print-match-export .print-match-frame {
+  border-width: 5px;
+  min-height: 960px;
+}
+
+.print-match-export-host {
+  left: -100000px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 680px;
+}
+
+.print-match-plain {
+  background: #ffffff;
+  color: #21140e;
+  font-family: "Poppins", sans-serif;
+  margin: 0;
+  max-width: 680px;
+  overflow: hidden;
+}
+
+.print-match-plain-sheet {
+  box-sizing: border-box;
+  min-height: 960px;
+  padding: 38px 34px;
+}
+
+.print-match-plain-kicker {
+  color: #6b391b;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.print-match-plain h1 {
+  color: #2a160e;
+  font-family: "Montserrat", sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+  margin: 8px 0 24px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.print-match-plain-couple {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.print-match-plain-couple section {
+  border: 1px solid #d8c4b0;
+  min-width: 0;
+  padding: 14px;
+}
+
+.print-match-plain-couple h2 {
+  color: #5a321d;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.print-match-plain-couple section > strong {
+  color: #4a3428;
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.print-match-plain-couple section > div {
+  display: grid;
+  gap: 5px 8px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  margin-top: 12px;
+}
+
+.print-match-plain-couple span,
+.print-match-plain-couple b {
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.print-match-plain-couple span {
+  color: #665047;
+  font-weight: 600;
+}
+
+.print-match-plain-couple b {
+  color: #2a160e;
+  overflow-wrap: anywhere;
+}
+
+.print-match-plain-couple p {
+  background: #f7efe6;
+  color: #5a321d;
+  font-size: 11px;
+  font-weight: 800;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.print-match-plain .print-match-total {
+  border: 1px solid #d8c4b0;
+  border-left: 0;
+  border-right: 0;
+  margin-bottom: 16px;
+  padding: 10px 0;
+}
+
+.print-match-plain .print-match-total span {
+  font-size: 12px;
+}
+
+.print-match-plain .print-match-total strong {
+  font-size: 24px;
+}
+
+.print-match-plain .print-match-table {
+  margin-top: 0;
+}
+
+.print-match-plain .print-match-table th,
+.print-match-plain .print-match-table td {
+  border-color: #cbb8aa;
+  color: #2a160e;
+  font-size: 9px;
+  line-height: 1.25;
+  padding: 6px 7px;
+}
+
+.print-match-plain .print-match-table th {
+  background: #f7efe6;
+}
+
+.print-match-plain .print-match-note {
+  margin-top: 16px;
+}
+
+.print-match-plain .print-match-note h2 {
+  border-bottom-color: #d8c4b0;
+  font-size: 14px;
+  margin-bottom: 8px;
+  padding-bottom: 7px;
+}
+
+.print-match-plain .print-match-note p {
+  color: #3d251b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.print-match-plain-export .print-match-plain-sheet {
+  min-height: 960px;
+}
+
 @media (max-width: 640px) {
   .print-calendar-frame {
     border-width: 3px;
@@ -1579,6 +2048,29 @@ body {
   .print-ornament-divider img {
     height: 32px;
     width: 32px;
+  }
+
+  .print-match-frame {
+    border-width: 3px;
+    min-height: 620px;
+  }
+
+  .print-match-frame::before,
+  .print-match-frame::after {
+    height: 20px;
+    width: 20px;
+  }
+
+  .print-match-frame::before {
+    border-width: 3px 0 0 3px;
+    left: 6px;
+    top: 6px;
+  }
+
+  .print-match-frame::after {
+    border-width: 0 3px 3px 0;
+    bottom: 6px;
+    right: 6px;
   }
 }
 

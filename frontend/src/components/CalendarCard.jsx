@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Moon, Search, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Moon, Search } from "lucide-react";
 import { getDashboardCalendarByMonth } from "../services/calendarApi";
 
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -37,7 +37,7 @@ function LunarMark({ status }) {
 
   return (
     <span className={`dashboard-lunar-mark ${tilem ? "dashboard-lunar-tilem" : "dashboard-lunar-purnama"}`}>
-      {tilem ? <Moon size={10} /> : <Sparkles size={10} />}
+      {tilem && <Moon size={10} />}
     </span>
   );
 }

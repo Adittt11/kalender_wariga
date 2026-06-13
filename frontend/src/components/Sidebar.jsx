@@ -5,7 +5,8 @@ import {
   UserRound,
   Sun,
   Printer,
-  Droplet
+  Droplet,
+  HeartHandshake
 } from "lucide-react";
 
 import ornamen from "../assets/ornamen.png";
@@ -16,6 +17,7 @@ const menus = [
   { label: "Tanya Wariga AI", path: "/tanya-wariga-ai", icon: Bot },
   { label: "Karakter kelahiran", path: "/karakter-kelahiran", icon: UserRound },
   { label: "Dewasa Ayu", path: "/dewasa-ayu", icon: Sun },
+  { label: "Pertemuan Lanang Istri", path: "/pertemuan-lanang-istri", icon: HeartHandshake },
   { label: "Cetak Kalender", path: "/cetak-kalender", icon: Printer },
   { label: "Penglukatan", path: "/penglukatan", icon: Droplet }
 ];

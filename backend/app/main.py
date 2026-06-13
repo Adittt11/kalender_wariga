@@ -5,6 +5,7 @@ from app.routes.generate_routes import router as generate_router
 from app.routes.calendar_routes import router as calendar_router
 from app.routes.dashboard_routes import router as dashboard_router
 from app.routes.chat_routes import router as chat_router
+from app.routes.pertemuan_routes import router as pertemuan_router
 
 app = FastAPI(title="Kalender Bali Wariga API")
 
@@ -38,6 +39,12 @@ app.include_router(
     chat_router,
     prefix="/api/chat",
     tags=["Tanya Wariga AI"]
+)
+
+app.include_router(
+    pertemuan_router,
+    prefix="/api/pertemuan",
+    tags=["Pertemuan Lanang Istri"]
 )
 
 

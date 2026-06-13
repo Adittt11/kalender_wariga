@@ -6,6 +6,7 @@ import TanyaWarigaAI from "../pages/TanyaWarigaAI";
 import KarakterKelahiran from "../pages/KarakterKelahiran";
 import DewasaAyu from "../pages/DewasaAyu";
 import Penglukatan from "../pages/Penglukatan";
+import PertemuanLanangIstri from "../pages/PertemuanLanangIstri";
 
 export default function AppRouter() {
   return (
@@ -16,6 +17,7 @@ export default function AppRouter() {
           <Route path="/tanya-wariga-ai" element={<TanyaWarigaAI />} />
           <Route path="/karakter-kelahiran" element={<KarakterKelahiran />} />
           <Route path="/dewasa-ayu" element={<DewasaAyu />} />
+          <Route path="/pertemuan-lanang-istri" element={<PertemuanLanangIstri />} />
           <Route path="/cetak-kalender" element={<CetakKalender />} />
           <Route path="/penglukatan" element={<Penglukatan />} />
         </Route>
