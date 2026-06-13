@@ -9,6 +9,9 @@ import ornament from "../assets/ornamen.png";
 const initialStartDate = "1900-01-01";
 const initialEndDate = "1900-01-02";
 const exportCalendarWidth = 680;
+const videoCanvasWidth = 1080;
+const videoFrameDuration = 3500;
+const videoFps = 30;
 
 function formatDate(date) {
   if (!date) {
@@ -185,6 +188,7 @@ export default function CetakKalender() {
   const [loading, setLoading] = useState(false);
   const [downloadingPng, setDownloadingPng] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadingVideo, setDownloadingVideo] = useState(false);
   const [loadingAi, setLoadingAi] = useState(false);
   const [error, setError] = useState("");
   const calendarRef = useRef(null);
@@ -416,6 +420,107 @@ export default function CetakKalender() {
     return `kalender-wariga-${startDate}-sampai-${endDate}.${extension}`;
   }
 
+  async function loadImageFromDataUrl(dataUrl) {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    return image;
+  }
+
+  function getSupportedVideoType() {
+    if (!window.MediaRecorder) {
+      return null;
+    }
+
+    return [
+      "video/webm;codecs=vp9",
+      "video/webm;codecs=vp8",
+      "video/webm",
+      "video/mp4",
+    ].find((type) => MediaRecorder.isTypeSupported(type));
+  }
+
+  async function createCalendarVideo(dataUrls) {
+    const mimeType = getSupportedVideoType();
+
+    if (!mimeType) {
+      throw new Error("Browser ini belum mendukung pembuatan video kalender.");
+    }
+
+    const images = await Promise.all(dataUrls.map(loadImageFromDataUrl));
+    const maxAspectRatio = Math.max(
+      ...images.map((image) => image.naturalHeight / image.naturalWidth)
+    );
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    canvas.width = videoCanvasWidth;
+    canvas.height = Math.ceil(videoCanvasWidth * maxAspectRatio);
+
+    const stream = canvas.captureStream(videoFps);
+    const recorder = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 4_000_000,
+    });
+    const chunks = [];
+
+    recorder.addEventListener("dataavailable", (event) => {
+      if (event.data.size > 0) {
+        chunks.push(event.data);
+      }
+    });
+
+    const stopped = new Promise((resolve, reject) => {
+      recorder.addEventListener("stop", resolve, { once: true });
+      recorder.addEventListener("error", () => {
+        reject(new Error("Video kalender gagal diproses."));
+      }, { once: true });
+    });
+
+    function drawImage(image) {
+      context.fillStyle = "#fffdfb";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+
+      const scale = Math.min(
+        canvas.width / image.naturalWidth,
+        canvas.height / image.naturalHeight
+      );
+      const width = image.naturalWidth * scale;
+      const height = image.naturalHeight * scale;
+
+      context.drawImage(
+        image,
+        (canvas.width - width) / 2,
+        (canvas.height - height) / 2,
+        width,
+        height
+      );
+    }
+
+    recorder.start();
+
+    for (const image of images) {
+      drawImage(image);
+      await new Promise((resolve) => setTimeout(resolve, videoFrameDuration));
+    }
+
+    recorder.stop();
+    await stopped;
+    stream.getTracks().forEach((track) => track.stop());
+
+    return new Blob(chunks, { type: mimeType });
+  }
+
+  function downloadBlob(blob, fileName) {
+    const link = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+
+    link.download = fileName;
+    link.href = objectUrl;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+
   async function downloadPng() {
     if (!calendarRef.current || !preview) {
       return;
@@ -461,9 +566,7 @@ export default function CetakKalender() {
       const availableWidth = pageWidth - margin * 2;
       const availableHeight = pageHeight - margin * 2;
       for (const [index, dataUrl] of dataUrls.entries()) {
-        const image = new Image();
-        image.src = dataUrl;
-        await image.decode();
+        const image = await loadImageFromDataUrl(dataUrl);
 
         if (index > 0) {
           pdf.addPage();
@@ -491,6 +594,27 @@ export default function CetakKalender() {
       setError(err.message || "PDF kalender gagal diunduh.");
     } finally {
       setDownloadingPdf(false);
+    }
+  }
+
+  async function downloadVideo() {
+    if (!calendarRef.current || !preview) {
+      return;
+    }
+
+    setDownloadingVideo(true);
+    setError("");
+
+    try {
+      const dataUrls = await renderCalendarRange();
+      const video = await createCalendarVideo(dataUrls);
+      const extension = video.type.includes("mp4") ? "mp4" : "webm";
+
+      downloadBlob(video, getExportFileName(extension));
+    } catch (err) {
+      setError(err.message || "Video kalender gagal diunduh.");
+    } finally {
+      setDownloadingVideo(false);
     }
   }
 
@@ -621,6 +745,13 @@ export default function CetakKalender() {
                 disabled={!preview || loadingAi || !preview.ai_ready}
                 loading={downloadingPng}
                 onDownload={downloadPng}
+              />
+              <DownloadCard
+                type="VIDEO"
+                description="Unduh rentang tanggal sebagai video slideshow kalender."
+                disabled={!preview || loadingAi || !preview.ai_ready}
+                loading={downloadingVideo}
+                onDownload={downloadVideo}
               />
             </div>
           </section>

@@ -1014,12 +1014,12 @@ body {
 }
 
 [data-theme="dark"] body {
-  background: #120f0e;
-  color: #f6eee8;
+  background: #211b18;
+  color: #f7eee5;
 }
 
 [data-theme="dark"] .app-shell {
-  background: #120f0e;
+  background: #211b18;
 }
 
 [data-theme="dark"] header,
@@ -1029,45 +1029,46 @@ body {
 [data-theme="dark"] div.bg-white,
 [data-theme="dark"] button.bg-white,
 [data-theme="dark"] label.bg-white {
-  background-color: #201a18;
-  border-color: #44352f;
+  background-color: #302722;
+  border-color: #5d4b42;
 }
 
 [data-theme="dark"] aside {
-  background-color: #191412;
+  background-color: #241c18;
 }
 
 [data-theme="dark"] .wariga-header {
-  background: #261b17;
-  border-color: #604331;
+  background: #352720;
+  border-color: #765844;
 }
 
 [data-theme="dark"] .wariga-header-title {
-  color: #f0d3a5;
+  color: #f5d49f;
 }
 
 [data-theme="dark"] .wariga-header-subtitle {
-  color: #c0a99b;
+  color: #d6c4b8;
 }
 
 [data-theme="dark"] .bg-\[\#FFF7ED\] {
-  background-color: #171311;
+  background-color: #28211d;
 }
 
 [data-theme="dark"] .bg-baliSoft,
 [data-theme="dark"] .bg-baliCream,
 [data-theme="dark"] .calendar-day-selected {
-  background-color: #352821;
+  background-color: #43352d;
 }
 
 [data-theme="dark"] .border-baliBorder,
 [data-theme="dark"] .calendar-month-row:not(:last-child) {
-  border-color: #44352f;
+  border-color: #5d4b42;
 }
 
 [data-theme="dark"] .text-baliDark,
+[data-theme="dark"] .text-baliBrown,
 [data-theme="dark"] .calendar-day-cell strong {
-  color: #f6eee8;
+  color: #f7eee5;
 }
 
 [data-theme="dark"] .text-gray-500,
@@ -1075,35 +1076,46 @@ body {
 [data-theme="dark"] .text-gray-700,
 [data-theme="dark"] .text-slate-500,
 [data-theme="dark"] .text-slate-600 {
-  color: #b8aaa3;
+  color: #d2c3b8;
 }
 
 [data-theme="dark"] .input,
-[data-theme="dark"] input {
-  background-color: #2a211e;
-  border-color: #44352f;
-  color: #f6eee8;
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: #3a2f29;
+  border-color: #6b574b;
+  color: #f7eee5;
+}
+
+[data-theme="dark"] .input:focus,
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus,
+[data-theme="dark"] select:focus {
+  border-color: #c8955d;
+  box-shadow: 0 0 0 3px rgba(200, 149, 93, 0.22);
 }
 
 [data-theme="dark"] .calendar-month-header > div,
 [data-theme="dark"] .calendar-wuku-cell {
-  background-color: #251e1b;
-  border-color: #44352f;
-  color: #b8aaa3;
+  background-color: #372d27;
+  border-color: #5d4b42;
+  color: #d2c3b8;
 }
 
 [data-theme="dark"] .calendar-day-cell {
-  background-color: #201a18;
-  border-color: #44352f;
+  background-color: #302722;
+  border-color: #5d4b42;
 }
 
 [data-theme="dark"] .calendar-day-cell:hover,
 [data-theme="dark"] .calendar-day-selected {
-  background-color: #352821;
+  background-color: #43352d;
 }
 
 [data-theme="dark"] .calendar-day-cell:disabled {
-  background-color: #171311;
+  background-color: #2a211d;
+  color: #9e8e83;
 }
 
 [data-theme="dark"] .print-calendar {
@@ -1113,24 +1125,24 @@ body {
 [data-theme="dark"] .dewasa-page,
 [data-theme="dark"] .dewasa-panel,
 [data-theme="dark"] .dewasa-results-panel {
-  background: #171311;
-  border-color: #44352f;
+  background: #28211d;
+  border-color: #5d4b42;
 }
 
 [data-theme="dark"] .dewasa-pill,
 [data-theme="dark"] .dewasa-time-toggle button,
 [data-theme="dark"] .dewasa-select-field select,
 [data-theme="dark"] .dewasa-select-field input {
-  background: #201a18;
-  border-color: #44352f;
-  color: #f6eee8;
+  background: #302722;
+  border-color: #5d4b42;
+  color: #f7eee5;
 }
 
 [data-theme="dark"] .dewasa-pill-active,
 [data-theme="dark"] .dewasa-time-toggle .dewasa-toggle-active,
 [data-theme="dark"] .dewasa-submit-button {
-  background: #8d5831;
-  border-color: #8d5831;
+  background: #a36a3d;
+  border-color: #a36a3d;
   color: #fffaf4;
 }
 
@@ -1138,19 +1150,120 @@ body {
 [data-theme="dark"] .dewasa-step-label p,
 [data-theme="dark"] .dewasa-guide-heading h2,
 [data-theme="dark"] .dewasa-results-panel > h2 {
-  color: #f3dfc7;
+  color: #f4dcc0;
 }
 
 [data-theme="dark"] .dewasa-select-field span,
 [data-theme="dark"] .dewasa-guide-panel li,
 [data-theme="dark"] .dewasa-result-list small {
-  color: #cbb8aa;
+  color: #d6c4b8;
 }
 
 [data-theme="dark"] .dewasa-result-column,
 [data-theme="dark"] .dewasa-result-column h3,
 [data-theme="dark"] .dewasa-result-list article {
-  border-color: #44352f;
+  border-color: #5d4b42;
+}
+
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .bg-baliBrown {
+  background-color: #9a6239;
+  color: #fffaf4;
+}
+
+[data-theme="dark"] .btn-primary:hover,
+[data-theme="dark"] .bg-baliBrown:hover {
+  background-color: #b17643;
+}
+
+[data-theme="dark"] .hover\:bg-baliSoft:hover,
+[data-theme="dark"] .hover\:bg-white\/10:hover {
+  background-color: #493a31;
+}
+
+[data-theme="dark"] .shadow-soft {
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.26);
+}
+
+[data-theme="dark"] .dashboard-page {
+  background: #28211d;
+}
+
+[data-theme="dark"] .dashboard-ai-shortcut h2,
+[data-theme="dark"] .dashboard-card-heading h2,
+[data-theme="dark"] .dashboard-calendar-toolbar h2,
+[data-theme="dark"] .dashboard-info-heading > strong,
+[data-theme="dark"] .dashboard-compact-calendar > strong,
+[data-theme="dark"] .dashboard-calendar-day,
+[data-theme="dark"] .dashboard-dewasa-card h3 {
+  color: #f7eee5;
+}
+
+[data-theme="dark"] .dashboard-ai-shortcut p,
+[data-theme="dark"] .dashboard-dewasa-card p,
+[data-theme="dark"] .dashboard-info-rows span,
+[data-theme="dark"] .calendar-day-cell > span:not(.calendar-lunar-badge) {
+  color: #d2c3b8;
+}
+
+[data-theme="dark"] .dashboard-card-icon,
+[data-theme="dark"] .calendar-nav-button {
+  background: #43352d;
+  border-color: #6b574b;
+  color: #f2c88c;
+}
+
+[data-theme="dark"] .dashboard-compact-calendar,
+[data-theme="dark"] .dashboard-info-heading {
+  border-color: #5d4b42;
+}
+
+[data-theme="dark"] .dashboard-calendar-day:not(:disabled):hover {
+  background: #493a31;
+}
+
+[data-theme="dark"] .dashboard-calendar-day-active,
+[data-theme="dark"] .wariga-sidebar-menu-active {
+  background: #9a6239;
+  color: #fffaf4;
+}
+
+[data-theme="dark"] .calendar-lunar-tilem,
+[data-theme="dark"] .dashboard-lunar-tilem {
+  background: #f0e5da;
+  color: #2d2521;
+}
+
+[data-theme="dark"] .calendar-lunar-purnama,
+[data-theme="dark"] .dashboard-lunar-purnama {
+  background: #5a2f2a;
+  color: #ffd8ca;
+}
+
+[data-theme="dark"] .rounded-2xl.bg-\[\#fdfcfb\],
+[data-theme="dark"] div.bg-\[\#fdfcfb\] {
+  background-color: #302722;
+}
+
+[data-theme="dark"] .bg-red-50 {
+  background-color: #4a2624;
+}
+
+[data-theme="dark"] .text-red-700,
+[data-theme="dark"] .text-red-600 {
+  color: #ffb4a8;
+}
+
+[data-theme="dark"] .wariga-sidebar-title {
+  color: #f5d49f;
+}
+
+[data-theme="dark"] .wariga-sidebar-menu {
+  color: #eadbd0;
+}
+
+[data-theme="dark"] .wariga-sidebar-scenery-image {
+  opacity: 0.72;
 }
 
 .print-calendar {

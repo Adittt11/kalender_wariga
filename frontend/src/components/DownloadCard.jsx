@@ -1,5 +1,11 @@
 import { Download } from "lucide-react";
 
+const typeIcons = {
+  PDF: "📄",
+  PNG: "🖼️",
+  VIDEO: "🎬",
+};
+
 export default function DownloadCard({
   type,
   description,
@@ -15,7 +21,7 @@ export default function DownloadCard({
       onClick={onDownload}
     >
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-baliSoft text-4xl">
-        {type === "PDF" ? "📄" : "🖼️"}
+        {typeIcons[type] || "⬇️"}
       </div>
 
       <div className="flex-1">
