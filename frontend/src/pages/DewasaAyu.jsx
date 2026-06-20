@@ -10,8 +10,8 @@ import {
   Search,
 } from "lucide-react";
 
-const categoryOptions = ["Dewa Yadnya", "Pitra Yadnya", "Manusa Yadnya"];
-const ceremonyOptions = ["Pawiwahan", "Pitra Yadnya", "Manusa Yadnya"];
+import { getDewasaAyuOptions, searchDewasaAyu } from "../services/dewasaAyuApi";
+
 const months = [
   "Januari",
   "Februari",
@@ -47,101 +47,8 @@ function getMonthName(value) {
   return months[monthIndex] || months[0];
 }
 
-function getDateRange(data) {
-  const dates = data.map((day) => day.tanggal).filter(Boolean).sort();
-
-  return {
-    min: dates[0] || "",
-    max: dates[dates.length - 1] || "",
-  };
-}
-
-function getDayTitle(wewaran) {
-  return [wewaran?.saptawara, wewaran?.pancawara].filter(Boolean).join(" ") || "-";
-}
-
-function getRuleNote(rule, ceremony) {
-  if (rule.rule_text_id) {
-    return rule.rule_text_id;
-  }
-
-  return `${rule.status || "Dewasa"} untuk ${ceremony}.`;
-}
-
-function getResultGroup(status) {
-  if (status === "Baik") {
-    return "ayu";
-  }
-
-  if (status === "Ala-Ayu") {
-    return "dipakai";
-  }
-
-  return "ala";
-}
-
-function buildOptions(data) {
-  const categories = new Set();
-  const ceremonies = new Set();
-  const years = new Set();
-
-  data.forEach((day) => {
-    if (day.tanggal) {
-      years.add(day.tanggal.slice(0, 4));
-    }
-
-    day.dewasa?.forEach((item) => {
-      if (item.jenis_yadnya) {
-        categories.add(item.jenis_yadnya);
-      }
-
-      if (item.upacara) {
-        ceremonies.add(item.upacara);
-      }
-    });
-  });
-
-  return {
-    categories: [...categories].sort(),
-    ceremonies: [...ceremonies].sort(),
-    years: [...years].sort(),
-  };
-}
-
-function filterDewasaResults(data, filters) {
-  const grouped = {
-    ayu: [],
-    dipakai: [],
-    ala: [],
-  };
-  const selectedMonth = String(months.indexOf(filters.month) + 1).padStart(2, "0");
-
-  data.forEach((day) => {
-    const isSelectedDay = filters.timeMode === "day" && day.tanggal === filters.date;
-    const isSelectedMonth =
-      filters.timeMode !== "day" && day.tanggal?.startsWith(`${filters.year}-${selectedMonth}`);
-
-    if (!isSelectedDay && !isSelectedMonth) {
-      return;
-    }
-
-    day.dewasa?.forEach((item) => {
-      if (item.jenis_yadnya !== filters.category || item.upacara !== filters.ceremony) {
-        return;
-      }
-
-      item.rules_match?.forEach((rule) => {
-        const group = getResultGroup(rule.status);
-        grouped[group].push({
-          date: formatDate(day.tanggal),
-          title: rule.nama_entitas || getDayTitle(day.wewaran),
-          note: getRuleNote(rule, item.upacara),
-        });
-      });
-    });
-  });
-
-  return grouped;
+function getMonthNumber(monthName) {
+  return months.indexOf(monthName) + 1;
 }
 
 function StepLabel({ number, text }) {
@@ -225,8 +132,16 @@ function ResultColumn({ emptyText, tone, title, items }) {
 }
 
 export default function DewasaAyu() {
-  const [data, setData] = useState([]);
+  const [options, setOptions] = useState({
+    categories: [],
+    ceremonies: [],
+    ceremonies_by_category: {},
+    date_range: { min: "", max: "" },
+    years: [],
+  });
+  const [results, setResults] = useState(defaultResults);
   const [loadingData, setLoadingData] = useState(true);
+  const [loadingResults, setLoadingResults] = useState(false);
   const [error, setError] = useState("");
   const [category, setCategory] = useState("Manusa Yadnya");
   const [ceremony, setCeremony] = useState("Pawiwahan");
@@ -243,42 +158,60 @@ export default function DewasaAyu() {
     year: "1900",
   });
 
+  async function loadResults(filters) {
+    const response = await searchDewasaAyu({
+      ...filters,
+      monthNumber: getMonthNumber(filters.month),
+    });
+
+    setResults(response.data || defaultResults);
+  }
+
   useEffect(() => {
     async function loadDewasaData() {
       try {
         setLoadingData(true);
-        const response = await fetch("/data/dewasa_hasil3.json");
-
-        if (!response.ok) {
-          throw new Error("Data Dewasa Ayu tidak dapat dimuat.");
-        }
-
-        const json = await response.json();
-        const options = buildOptions(json);
-        const defaultCategory = options.categories[0] || "Manusa Yadnya";
-        const defaultCeremony = options.ceremonies.includes("Pawiwahan")
+        const response = await getDewasaAyuOptions();
+        const optionData = response.data || {};
+        const defaultCategory = optionData.categories?.includes("Manusa Yadnya")
+          ? "Manusa Yadnya"
+          : optionData.categories?.[0] || "Manusa Yadnya";
+        const ceremoniesForCategory = optionData.ceremonies_by_category?.[defaultCategory] || [];
+        const defaultCeremony = ceremoniesForCategory.includes("Pawiwahan")
           ? "Pawiwahan"
-          : options.ceremonies[0] || "Pawiwahan";
-        const defaultDate = json[0]?.tanggal || "1900-01-01";
-        const defaultYear = options.years[0] || "1900";
+          : ceremoniesForCategory[0] || optionData.ceremonies?.[0] || "Pawiwahan";
+        const defaultDate = optionData.date_range?.min || "1900-01-01";
+        const defaultYear = optionData.years?.[0] || "1900";
         const defaultMonth = getMonthName(defaultDate);
-
-        setData(json);
-        setCategory(defaultCategory);
-        setCeremony(defaultCeremony);
-        setDate(defaultDate);
-        setYear(defaultYear);
-        setMonth(defaultMonth);
-        setSubmittedFilters({
+        const initialFilters = {
           category: defaultCategory,
           ceremony: defaultCeremony,
           date: defaultDate,
           month: defaultMonth,
           timeMode: "month",
           year: defaultYear,
+        };
+
+        setOptions({
+          categories: optionData.categories || [],
+          ceremonies: optionData.ceremonies || [],
+          ceremonies_by_category: optionData.ceremonies_by_category || {},
+          date_range: optionData.date_range || { min: "", max: "" },
+          years: optionData.years || [],
         });
+        setCategory(defaultCategory);
+        setCeremony(defaultCeremony);
+        setDate(defaultDate);
+        setYear(defaultYear);
+        setMonth(defaultMonth);
+        setSubmittedFilters(initialFilters);
+        await loadResults(initialFilters);
       } catch (err) {
-        setError(err.message || "Data Dewasa Ayu tidak dapat dimuat.");
+        setError(
+          err.response?.data?.detail ||
+          err.message ||
+          "Data Dewasa Ayu tidak dapat dimuat."
+        );
       } finally {
         setLoadingData(false);
       }
@@ -287,33 +220,17 @@ export default function DewasaAyu() {
     loadDewasaData();
   }, []);
 
-  const options = useMemo(() => buildOptions(data), [data]);
-  const dateRange = useMemo(() => getDateRange(data), [data]);
+  const dateRange = options.date_range || { min: "", max: "" };
 
   const filteredCeremonyOptions = useMemo(() => {
-    const ceremonies = new Set();
-
-    data.forEach((day) => {
-      day.dewasa?.forEach((item) => {
-        if (item.jenis_yadnya === category && item.upacara) {
-          ceremonies.add(item.upacara);
-        }
-      });
-    });
-
-    return [...ceremonies].sort();
-  }, [category, data]);
+    return options.ceremonies_by_category?.[category] || [];
+  }, [category, options.ceremonies_by_category]);
 
   useEffect(() => {
     if (filteredCeremonyOptions.length && !filteredCeremonyOptions.includes(ceremony)) {
       setCeremony(filteredCeremonyOptions[0]);
     }
   }, [ceremony, filteredCeremonyOptions]);
-
-  const results = useMemo(
-    () => filterDewasaResults(data, submittedFilters),
-    [data, submittedFilters]
-  );
 
   const resultTitle = useMemo(
     () => {
@@ -332,14 +249,14 @@ export default function DewasaAyu() {
         <section className="dewasa-panel dewasa-filter-panel">
           <StepLabel number="1" text="Pilih Kategori / Jenis Yadnya" />
           <OptionPills
-            options={options.categories.length ? options.categories : categoryOptions}
+            options={options.categories.length ? options.categories : [category]}
             value={category}
             onChange={setCategory}
           />
 
           <StepLabel number="2" text="Pilih Jenis Upacara / Kegiatan" />
           <OptionPills
-            options={filteredCeremonyOptions.length ? filteredCeremonyOptions : ceremonyOptions}
+            options={filteredCeremonyOptions.length ? filteredCeremonyOptions : [ceremony]}
             value={ceremony}
             onChange={setCeremony}
           />
@@ -394,12 +311,29 @@ export default function DewasaAyu() {
 
           <button
             className="dewasa-submit-button"
-            disabled={loadingData}
-            onClick={() => setSubmittedFilters({ category, ceremony, date, month, timeMode, year })}
+            disabled={loadingData || loadingResults}
+            onClick={async () => {
+              const nextFilters = { category, ceremony, date, month, timeMode, year };
+              setError("");
+              setLoadingResults(true);
+
+              try {
+                await loadResults(nextFilters);
+                setSubmittedFilters(nextFilters);
+              } catch (err) {
+                setError(
+                  err.response?.data?.detail ||
+                  err.message ||
+                  "Data Dewasa Ayu tidak dapat dimuat."
+                );
+              } finally {
+                setLoadingResults(false);
+              }
+            }}
             type="button"
           >
             <Search size={15} />
-            {loadingData ? "Memuat Data" : "Tampilkan Hasil"}
+            {loadingData || loadingResults ? "Memuat Data" : "Tampilkan Hasil"}
             <ArrowRight size={15} />
           </button>
         </section>
@@ -421,7 +355,7 @@ export default function DewasaAyu() {
       <section className="dewasa-results-panel">
         {error ? (
           <p className="dewasa-load-state">{error}</p>
-        ) : loadingData ? (
+        ) : loadingData || loadingResults ? (
           <p className="dewasa-load-state">Memuat data Dewasa Ayu...</p>
         ) : (
           <>

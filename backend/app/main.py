@@ -8,6 +8,7 @@ from app.routes.chat_routes import router as chat_router
 from app.routes.pertemuan_routes import router as pertemuan_router
 from app.routes.knowledge_routes import router as knowledge_router
 from app.routes.admin_auth_routes import router as admin_auth_router
+from app.routes.dewasa_ayu_routes import router as dewasa_ayu_router
 
 app = FastAPI(title="Kalender Bali Wariga API")
 
@@ -59,6 +60,12 @@ app.include_router(
     admin_auth_router,
     prefix="/api/admin",
     tags=["Admin Auth"]
+)
+
+app.include_router(
+    dewasa_ayu_router,
+    prefix="/api/dewasa-ayu",
+    tags=["Dewasa Ayu"]
 )
 
 
