@@ -93,15 +93,27 @@ body {
 
 .dashboard-page {
   background: #fffaf4;
-  border-radius: 24px;
+  border-radius: 10px;
   min-height: calc(100vh - 120px);
   padding: 18px;
 }
 
+.dashboard-page .card {
+  border-radius: 8px;
+  box-shadow: 0 10px 26px rgba(88, 52, 31, 0.05);
+}
+
 .dashboard-layout {
   display: grid;
-  gap: 20px;
-  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  align-items: start;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.95fr);
+}
+
+.dashboard-left-column,
+.dashboard-right-column {
+  display: grid;
+  gap: 18px;
 }
 
 .dashboard-ai-shortcut,
@@ -113,7 +125,8 @@ body {
 
 .dashboard-ai-shortcut {
   gap: 14px;
-  padding: 16px 18px;
+  min-height: 70px;
+  padding: 14px 18px;
   transition: 180ms ease;
 }
 
@@ -142,14 +155,14 @@ body {
   color: #65371f;
   display: flex;
   flex-shrink: 0;
-  height: 42px;
+  height: 36px;
   justify-content: center;
-  width: 42px;
+  width: 36px;
 }
 
 .dashboard-calendar-card {
   overflow: hidden;
-  padding: 18px;
+  padding: 20px 24px 24px;
 }
 
 .dashboard-calendar-toolbar {
@@ -168,13 +181,43 @@ body {
   text-align: center;
 }
 
+.dashboard-calendar-selectors {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(126px, 1fr) 86px;
+  min-width: 230px;
+}
+
+.dashboard-calendar-selectors select {
+  appearance: none;
+  background: #fffaf4;
+  border: 1px solid #eadfd4;
+  border-radius: 8px;
+  color: #3b2117;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 800;
+  height: 40px;
+  outline: none;
+  padding: 0 28px 0 12px;
+  text-align: center;
+  transition: 150ms ease;
+}
+
+.dashboard-calendar-selectors select:focus,
+.dashboard-calendar-selectors select:hover {
+  border-color: #cda67c;
+  box-shadow: 0 0 0 3px rgba(205, 166, 124, 0.18);
+}
+
 .dashboard-compact-calendar {
   border: 1px solid #eadfd4;
-  border-radius: 14px;
+  border-radius: 8px;
   display: grid;
   gap: 4px;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  padding: 14px;
+  padding: 14px 18px;
 }
 
 .dashboard-compact-calendar > strong {
@@ -308,9 +351,9 @@ body {
 }
 
 .dashboard-time-tags {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 14px;
 }
 
@@ -319,7 +362,9 @@ body {
   border-radius: 8px;
   color: #fff;
   font-size: 0.7rem;
+  min-height: 28px;
   padding: 8px 12px;
+  text-align: center;
 }
 
 .dashboard-time-tags p,
@@ -347,6 +392,64 @@ body {
   border: 1px solid #e5cfb1;
   border-radius: 10px;
   padding: 10px 11px;
+}
+
+.dashboard-month-grid {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-month-grid .dashboard-month-list-card {
+  border-radius: 8px 0 0 8px;
+  min-height: 250px;
+}
+
+.dashboard-month-grid .dashboard-month-list-card + .dashboard-month-list-card {
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+}
+
+.dashboard-month-list-card {
+  padding: 18px;
+}
+
+.dashboard-month-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 14px;
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.dashboard-month-list li {
+  color: #352119;
+  display: grid;
+  font-size: 0.72rem;
+  gap: 5px;
+  grid-template-columns: 28px minmax(0, 1fr);
+  line-height: 1.45;
+}
+
+.dashboard-month-list strong {
+  color: #3f2418;
+  font-weight: 800;
+}
+
+.dashboard-month-list span {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-empty-text {
+  color: #6d584f;
+  font-size: 0.74rem;
+  line-height: 1.7;
+  margin-top: 14px;
+}
+
+.dashboard-piodalan-card .dashboard-month-list {
+  max-height: 180px;
 }
 
 .dashboard-dewasa-list h3 {
@@ -721,6 +824,23 @@ body {
 
   .dashboard-calendar-card {
     padding: 12px;
+  }
+
+  .dashboard-calendar-toolbar {
+    gap: 8px;
+  }
+
+  .dashboard-calendar-selectors {
+    gap: 6px;
+    grid-template-columns: minmax(104px, 1fr) 72px;
+    min-width: 0;
+  }
+
+  .dashboard-calendar-selectors select {
+    font-size: 0.78rem;
+    height: 36px;
+    padding-left: 8px;
+    padding-right: 18px;
   }
 
   .dashboard-compact-calendar {

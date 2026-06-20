@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 
-from app.services.kalender_service import (
-    get_kalender_by_date,
-    get_kalender_by_month,
+from app.services.kalender_bali_service import (
+    get_kalender_bali_by_date,
+    get_kalender_bali_by_month,
 )
 
 router = APIRouter()
@@ -10,12 +10,12 @@ router = APIRouter()
 
 @router.get("/date/{tanggal}")
 def dashboard_by_date(tanggal: str):
-    data = get_kalender_by_date(tanggal)
+    data = get_kalender_bali_by_date(tanggal)
 
     if data is None:
         raise HTTPException(
             status_code=404,
-            detail="Data kalender Dawuh tidak ditemukan",
+            detail="Data kalender Bali tidak ditemukan",
         )
 
     return {
@@ -26,7 +26,7 @@ def dashboard_by_date(tanggal: str):
 
 @router.get("/month/{tahun}/{bulan}")
 def dashboard_by_month(tahun: int, bulan: int):
-    data = get_kalender_by_month(tahun, bulan)
+    data = get_kalender_bali_by_month(tahun, bulan)
 
     return {
         "success": True,

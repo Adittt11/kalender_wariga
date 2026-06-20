@@ -53,6 +53,18 @@ def parse_row(row):
         "astawara": title_value(gv(row, "Astawara")),
         "sangawara": title_value(gv(row, "Sangawara")),
         "dasawara": title_value(gv(row, "Dasawara")),
+        "ekajalarsi": title_value(gv(row, "Ekajalarsi")),
+        "palalintangan": title_value(gv(row, "Palalintangan")),
+        "pararasan": title_value(gv(row, "Pararasan")),
+        "pratiti_samutpada": title_value(gv(row, "PratitiSamutpada")),
+        "pakakalan": gv(row, "Pakakalan"),
+        "baik_buruk_hari": gv(row, "InformasiPakakalan"),
+        "dawuh": gv(row, "dawuh", gv(row, "Dawuh")),
+        "kajengkliwon": gv(row, "kajengkliwon"),
+        "harikeagamaan": gv(row, "harikeagamaan"),
+        "nyepi": gv(row, "Nyepi"),
+        "harinonbali": gv(row, "harinonbali"),
+        "piodalan": gv(row, "piodalan"),
     }
 
 
@@ -61,7 +73,7 @@ def get_kalender_bali_by_month(tahun, bulan):
         rows = conn.execute(
             text("""
                 SELECT *, "Pengelong" AS "Panglong"
-                FROM kalender_dawuh
+                FROM kalender_bali
                 WHERE "Tahun" = :tahun AND "Bulan" = :bulan
                 ORDER BY "Tanggal"
             """),
@@ -71,6 +83,33 @@ def get_kalender_bali_by_month(tahun, bulan):
         return [parse_row(dict(row._mapping)) for row in rows]
 
 
+def get_kalender_bali_bounds():
+    with engine.connect() as conn:
+        row = conn.execute(
+            text("""
+                SELECT
+                    MIN("Tahun") AS min_year,
+                    MIN(("Tahun" * 100) + "Bulan") AS min_month_key,
+                    MAX("Tahun") AS max_year,
+                    MAX(("Tahun" * 100) + "Bulan") AS max_month_key
+                FROM kalender_bali
+            """)
+        ).mappings().first()
+
+        if not row or row["min_month_key"] is None:
+            return None
+
+        min_month_key = int(row["min_month_key"])
+        max_month_key = int(row["max_month_key"])
+
+        return {
+            "min_year": int(row["min_year"]),
+            "min_month": min_month_key % 100,
+            "max_year": int(row["max_year"]),
+            "max_month": max_month_key % 100,
+        }
+
+
 def get_kalender_bali_by_date(tanggal):
     target = datetime.strptime(tanggal, "%Y-%m-%d").date()
 
@@ -78,7 +117,7 @@ def get_kalender_bali_by_date(tanggal):
         row = conn.execute(
             text("""
                 SELECT *, "Pengelong" AS "Panglong"
-                FROM kalender_dawuh
+                FROM kalender_bali
                 WHERE "Tahun" = :tahun
                   AND "Bulan" = :bulan
                   AND "Tanggal" = :tanggal

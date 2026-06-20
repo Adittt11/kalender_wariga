@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Bot, CalendarDays, Clock3, Moon, Scale, Sparkles } from "lucide-react";
+import { ArrowRight, Bot, CalendarDays, Clock3, Landmark, Moon, Scale, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import CalendarCard from "../components/CalendarCard";
 import { getDashboardCalendarByDate } from "../services/calendarApi";
@@ -7,11 +7,56 @@ import { getDashboardCalendarByDate } from "../services/calendarApi";
 const initialDate = "1900-01-01";
 
 function splitValues(value, separator) {
-  if (!value || value === "-") {
+  if (!value || value === "-" || value === "None") {
     return [];
   }
 
   return value.split(separator).map((item) => item.trim()).filter(Boolean);
+}
+
+function parseGoodTimes(value) {
+  if (!hasValue(value)) {
+    return [];
+  }
+
+  if (value.includes("|")) {
+    return splitValues(value, "|");
+  }
+
+  return value
+    .split(/,\s*(?=\d{2}[.:]\d{2}\s*-)/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function hasValue(value) {
+  return Boolean(value && value !== "-" && value !== "None");
+}
+
+function normalizeEventText(value) {
+  return String(value || "")
+    .replace(/\[[^\]]+\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectMonthlyEvents(monthData, fields) {
+  return monthData.reduce((items, row) => {
+    const texts = fields
+      .map((field) => row[field])
+      .filter(hasValue)
+      .map(normalizeEventText)
+      .filter(Boolean);
+
+    if (texts.length) {
+      items.push({
+        tanggal: row.tanggal,
+        text: texts.join("; "),
+      });
+    }
+
+    return items;
+  }, []);
 }
 
 function parseDayInformation(value) {
@@ -81,6 +126,29 @@ function InfoRows({ detail }) {
   );
 }
 
+function MonthlyListCard({ className = "", icon, items, title }) {
+  return (
+    <section className={`card dashboard-month-list-card ${className}`}>
+      <div className="dashboard-card-heading">
+        <div className="dashboard-card-icon">{icon}</div>
+        <h2>{title}</h2>
+      </div>
+      {items.length ? (
+        <ol className="dashboard-month-list">
+          {items.map((item) => (
+            <li key={`${title}-${item.tanggal}-${item.text}`}>
+              <strong>{item.tanggal}.</strong>
+              <span>{item.text}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="dashboard-empty-text">Tidak ada data pada bulan ini.</p>
+      )}
+    </section>
+  );
+}
+
 function LunarStatus({ status }) {
   if (!status || status === "-") {
     return null;
@@ -99,6 +167,7 @@ function LunarStatus({ status }) {
 export default function Dashboard() {
   const [selectedDate, setSelectedDate] = useState(initialDate);
   const [detail, setDetail] = useState(null);
+  const [monthData, setMonthData] = useState([]);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
 
@@ -126,13 +195,16 @@ export default function Dashboard() {
     loadDate(initialDate);
   }, []);
 
-  const goodTimes = splitValues(detail?.dawuh, "|");
+  const goodTimes = parseGoodTimes(detail?.dawuh);
   const dayInformation = parseDayInformation(detail?.baik_buruk_hari);
+  const hinduEvents = collectMonthlyEvents(monthData, ["status_purnama", "kajengkliwon", "harikeagamaan", "nyepi"]);
+  const nationalEvents = collectMonthlyEvents(monthData, ["harinonbali"]);
+  const piodalanEvents = collectMonthlyEvents(monthData, ["piodalan"]);
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-layout">
-        <div className="space-y-5">
+        <div className="dashboard-left-column">
           <Link className="card dashboard-ai-shortcut" to="/tanya-wariga-ai">
             <div className="dashboard-card-icon"><Bot size={19} /></div>
             <div>
@@ -142,22 +214,34 @@ export default function Dashboard() {
             <ArrowRight className="ml-auto" size={20} />
           </Link>
 
-          <CalendarCard onSelectDate={loadDate} selectedDate={selectedDate} />
+          <CalendarCard
+            onMonthDataChange={setMonthData}
+            onSelectDate={loadDate}
+            selectedDate={selectedDate}
+          />
 
-          <section className="card dashboard-data-card">
-            <div className="dashboard-card-heading">
-              <div className="dashboard-card-icon"><Clock3 size={19} /></div>
-              <h2>Waktu Baik</h2>
-            </div>
-            <div className="dashboard-time-tags">
-              {goodTimes.length
-                ? goodTimes.map((item) => <span key={item}>{item}</span>)
-                : <p>Tidak ada waktu khusus.</p>}
-            </div>
-          </section>
+          <div className="dashboard-month-grid">
+            <MonthlyListCard
+              icon={<Moon size={18} />}
+              items={hinduEvents}
+              title="Hari Raya Hindu"
+            />
+            <MonthlyListCard
+              icon={<CalendarDays size={18} />}
+              items={nationalEvents}
+              title="Hari Nasional"
+            />
+          </div>
+
+          <MonthlyListCard
+            className="dashboard-piodalan-card"
+            icon={<Landmark size={18} />}
+            items={piodalanEvents}
+            title="Piodalan"
+          />
         </div>
 
-        <div className="space-y-5">
+        <div className="dashboard-right-column">
           <section className="card dashboard-info-card">
             <div className="dashboard-info-heading">
               <div className="dashboard-card-heading">
@@ -176,6 +260,18 @@ export default function Dashboard() {
             ) : (
               <p className="py-12 text-center text-sm text-gray-500">{error}</p>
             )}
+          </section>
+
+          <section className="card dashboard-data-card">
+            <div className="dashboard-card-heading">
+              <div className="dashboard-card-icon"><Clock3 size={19} /></div>
+              <h2>Waktu Baik</h2>
+            </div>
+            <div className="dashboard-time-tags">
+              {goodTimes.length
+                ? goodTimes.map((item) => <span key={item}>{item}</span>)
+                : <p>Tidak ada waktu khusus.</p>}
+            </div>
           </section>
 
           <section className="card dashboard-data-card dashboard-dewasa-card">

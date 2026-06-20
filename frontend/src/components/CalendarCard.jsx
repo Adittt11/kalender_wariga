@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight, Moon, Search } from "lucide-react";
 import { getDashboardCalendarByMonth } from "../services/calendarApi";
 
-const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
+const dayNames = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const initialDate = new Date(1900, 0, 1);
 
 function getMonthLabel(year, month) {
@@ -13,7 +13,7 @@ function getMonthLabel(year, month) {
 }
 
 function getMonthCells(year, month, monthData) {
-  const firstDay = new Date(year, month - 1, 1).getDay();
+  const firstDay = (new Date(year, month - 1, 1).getDay() + 6) % 7;
   const totalDays = new Date(year, month, 0).getDate();
   const cells = Array.from({ length: firstDay }, () => null);
 
@@ -42,7 +42,7 @@ function LunarMark({ status }) {
   );
 }
 
-export default function CalendarCard({ onSelectDate, selectedDate }) {
+export default function CalendarCard({ onMonthDataChange, onSelectDate, selectedDate }) {
   const [year, setYear] = useState(initialDate.getFullYear());
   const [month, setMonth] = useState(initialDate.getMonth() + 1);
   const [monthData, setMonthData] = useState([]);
@@ -56,9 +56,12 @@ export default function CalendarCard({ onSelectDate, selectedDate }) {
 
       try {
         const response = await getDashboardCalendarByMonth(year, month);
-        setMonthData(response.data || []);
+        const data = response.data || [];
+        setMonthData(data);
+        onMonthDataChange?.(data, { year, month });
       } catch (err) {
         setMonthData([]);
+        onMonthDataChange?.([], { year, month });
         setError(
           err.response?.data?.detail ||
             err.message ||
@@ -121,7 +124,7 @@ export default function CalendarCard({ onSelectDate, selectedDate }) {
       {!loading && !error && !monthData.length && (
         <div className="m-4 flex items-center gap-3 rounded-2xl bg-baliSoft p-4 text-sm text-baliBrown">
           <Search size={18} />
-          Data bulan ini belum tersedia di tabel kalender_dawuh.
+          Data bulan ini belum tersedia di tabel kalender_bali.
         </div>
       )}
     </section>
