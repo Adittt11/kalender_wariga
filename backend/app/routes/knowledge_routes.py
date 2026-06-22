@@ -4,6 +4,7 @@ from app.services.admin_auth_service import require_admin
 from app.services.knowledge_service import (
     KNOWLEDGE_CATEGORIES,
     create_knowledge_document,
+    delete_knowledge_document,
     list_knowledge_documents,
 )
 
@@ -55,4 +56,19 @@ def knowledge_upload(
     return {
         "success": True,
         "data": document,
+    }
+
+
+@router.delete("/{document_id}")
+def knowledge_delete(document_id: int, _admin=Depends(require_admin)):
+    try:
+        deleted_document = delete_knowledge_document(document_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+
+    return {
+        "success": True,
+        "data": deleted_document,
     }

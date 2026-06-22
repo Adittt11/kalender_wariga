@@ -262,6 +262,55 @@ def list_knowledge_documents():
         return [dict(row._mapping) for row in rows]
 
 
+def delete_knowledge_document(document_id):
+    try:
+        normalized_id = int(document_id)
+    except (TypeError, ValueError) as error:
+        raise ValueError("ID knowledge tidak valid.") from error
+
+    with engine.begin() as conn:
+        ensure_knowledge_tables(conn)
+        document = conn.execute(
+            text("""
+                SELECT
+                    id,
+                    title,
+                    category,
+                    source_filename
+                FROM knowledge_documents
+                WHERE id = :document_id
+            """),
+            {"document_id": normalized_id},
+        ).mappings().first()
+
+        if not document:
+            raise ValueError("Knowledge tidak ditemukan.")
+
+        deleted_chunks = conn.execute(
+            text("""
+                DELETE FROM knowledge_chunks
+                WHERE document_id = :document_id
+            """),
+            {"document_id": normalized_id},
+        ).rowcount
+
+        conn.execute(
+            text("""
+                DELETE FROM knowledge_documents
+                WHERE id = :document_id
+            """),
+            {"document_id": normalized_id},
+        )
+
+    return {
+        "id": document["id"],
+        "title": document["title"],
+        "category": document["category"],
+        "source_filename": document["source_filename"],
+        "deleted_chunk_count": deleted_chunks,
+    }
+
+
 def search_knowledge(query, limit=5):
     normalized_query = normalize_text(query)
 

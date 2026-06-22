@@ -31,3 +31,11 @@ export async function uploadKnowledge({ category, title, file }) {
 
   return response.data;
 }
+
+export async function deleteKnowledgeDocument(documentId) {
+  const response = await api.delete(`/api/knowledge/${documentId}`, {
+    headers: getAdminAuthHeaders(),
+  });
+
+  return response.data;
+}

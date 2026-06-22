@@ -7,10 +7,12 @@ import {
   FileText,
   LogOut,
   Loader2,
+  Trash2,
   UploadCloud,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
+  deleteKnowledgeDocument,
   getKnowledgeCategories,
   getKnowledgeDocuments,
   uploadKnowledge,
@@ -76,6 +78,7 @@ export default function AdminKnowledge() {
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [deletingDocumentId, setDeletingDocumentId] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -149,6 +152,34 @@ export default function AdminKnowledge() {
       setError(handleRequestError(err, "Knowledge gagal di-upload."));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDeleteDocument(document) {
+    const confirmed = window.confirm(
+      `Hapus knowledge "${document.title}"? Data chunk/embedding dokumen ini juga akan dihapus.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingDocumentId(document.id);
+    setError("");
+    setMessage("");
+
+    try {
+      const response = await deleteKnowledgeDocument(document.id);
+      const deleted = response.data;
+
+      setMessage(
+        `Knowledge "${deleted.title}" berhasil dihapus beserta ${deleted.deleted_chunk_count} embedding.`
+      );
+      await loadDocuments();
+    } catch (err) {
+      setError(handleRequestError(err, "Knowledge gagal dihapus."));
+    } finally {
+      setDeletingDocumentId(null);
     }
   }
 
@@ -316,8 +347,24 @@ export default function AdminKnowledge() {
                           {formatDate(document.created_at)}
                         </p>
                       </div>
-                      <div className="rounded-xl border border-baliBorder px-3 py-2 text-center text-sm font-semibold text-baliBrown">
-                        {document.chunk_count} embedding
+                      <div className="flex items-center gap-2 sm:justify-end">
+                        <div className="rounded-xl border border-baliBorder px-3 py-2 text-center text-sm font-semibold text-baliBrown">
+                          {document.chunk_count} embedding
+                        </div>
+                        <button
+                          aria-label={`Hapus ${document.title}`}
+                          className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={deletingDocumentId === document.id}
+                          title="Hapus knowledge"
+                          type="button"
+                          onClick={() => handleDeleteDocument(document)}
+                        >
+                          {deletingDocumentId === document.id ? (
+                            <Loader2 className="animate-spin" size={17} />
+                          ) : (
+                            <Trash2 size={17} />
+                          )}
+                        </button>
                       </div>
                     </article>
                   );

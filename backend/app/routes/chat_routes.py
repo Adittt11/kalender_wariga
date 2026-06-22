@@ -5,10 +5,13 @@ from pydantic import BaseModel, Field
 
 from app.config import GROQ_MODEL, OPENAI_LATEST_MODEL, OPENAI_MINI_MODEL
 from app.services.chat_context_service import (
+    build_dewasa_direct_answer,
     build_chat_database_context,
     extract_latest_date,
     get_latest_user_message,
     is_calendar_question,
+    is_dewasa_search_question,
+    is_monthly_calendar_question,
 )
 from app.services.groq_service import chat_wariga as chat_wariga_groq
 from app.services.openai_service import chat_wariga as chat_wariga_openai
@@ -24,7 +27,7 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=20)
-    model: Literal["groq", "gpt54_mini", "gpt_latest"] = "gpt_latest"
+    model: Literal["groq", "gpt54_mini", "gpt_latest"] = "gpt54_mini"
 
 
 CHAT_MODEL_OPTIONS = {
@@ -41,7 +44,7 @@ CHAT_MODEL_OPTIONS = {
     "gpt_latest": {
         "provider": "openai",
         "model": OPENAI_LATEST_MODEL,
-        "label": "GPT Terbaru",
+        "label": "GPT 5.5",
     },
 }
 
@@ -54,6 +57,20 @@ def clean_chat_answer(answer):
 def chat(payload: ChatRequest):
     try:
         messages = [message.model_dump() for message in payload.messages]
+        latest_user_message = get_latest_user_message(messages)
+        dewasa_answer = build_dewasa_direct_answer(latest_user_message)
+
+        if dewasa_answer:
+            return {
+                "success": True,
+                "data": {
+                    "answer": clean_chat_answer(dewasa_answer),
+                    "model": "database",
+                    "model_key": "dewasa_direct",
+                    "model_name": "dewasa_database",
+                    "model_label": "Database Dewasa Ayu",
+                },
+            }
 
         if not is_calendar_question(messages):
             return {
@@ -69,8 +86,12 @@ def chat(payload: ChatRequest):
 
         ai_resolved_date = None
 
-        if not extract_latest_date(messages):
-            ai_resolved_date = interpret_calendar_date(get_latest_user_message(messages))
+        if (
+            not extract_latest_date(messages)
+            and not is_dewasa_search_question(latest_user_message)
+            and not is_monthly_calendar_question(latest_user_message)
+        ):
+            ai_resolved_date = interpret_calendar_date(latest_user_message)
 
         database_context = build_chat_database_context(
             messages,

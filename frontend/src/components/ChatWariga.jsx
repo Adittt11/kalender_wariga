@@ -23,7 +23,7 @@ const chatModelOptions = [
   },
   {
     key: "gpt_latest",
-    label: "GPT Terbaru",
+    label: "GPT 5.5",
     helper: "Terbaru",
   },
 ];
@@ -31,7 +31,7 @@ const chatModelOptions = [
 export default function ChatWariga() {
   const [messages, setMessages] = useState(initialMessages);
   const [question, setQuestion] = useState("");
-  const [selectedModel, setSelectedModel] = useState("gpt_latest");
+  const [selectedModel, setSelectedModel] = useState("gpt54_mini");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const chatEndRef = useRef(null);

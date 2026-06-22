@@ -128,7 +128,9 @@ def chat_wariga(messages, database_context, model=None):
                 "sebagai kepastian mutlak. Jangan gunakan format Markdown, "
                 "jangan gunakan tanda bintang, dan jangan menebalkan teks. "
                 "Jika membuat daftar, gunakan baris biasa dengan angka atau "
-                "tanda hubung tanpa simbol bintang.\n\n"
+                "tanda hubung tanpa simbol bintang. Untuk pertanyaan Dewasa, "
+                "gunakan istilah Ayu untuk baik, Ala-Ayu untuk biasa saja atau "
+                "campuran, dan Ala untuk buruk.\n\n"
                 f"KONTEKS DATABASE BACKEND:\n{database_context}"
             ),
         },
