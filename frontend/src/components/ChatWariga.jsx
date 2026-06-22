@@ -6,13 +6,32 @@ const initialMessages = [
   {
     role: "assistant",
     content:
-      "Om swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, Permata, dan Lontar. Untuk detail kalender dari database, sertakan tanggal dengan format YYYY-MM-DD.",
+      "Om swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, Permata, dan Lontar. Untuk detail kalender dari database, sebutkan tanggal secara natural, misalnya 22 Juni 2026, besok, atau 22/06/2026.",
+  },
+];
+
+const chatModelOptions = [
+  {
+    key: "groq",
+    label: "Groq",
+    helper: "Cepat",
+  },
+  {
+    key: "gpt54_mini",
+    label: "GPT 5.4 Mini",
+    helper: "Ringan",
+  },
+  {
+    key: "gpt_latest",
+    label: "GPT Terbaru",
+    helper: "Terbaru",
   },
 ];
 
 export default function ChatWariga() {
   const [messages, setMessages] = useState(initialMessages);
   const [question, setQuestion] = useState("");
+  const [selectedModel, setSelectedModel] = useState("gpt_latest");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const chatEndRef = useRef(null);
@@ -37,7 +56,7 @@ export default function ChatWariga() {
     setLoading(true);
 
     try {
-      const response = await sendChatMessages(nextMessages);
+      const response = await sendChatMessages(nextMessages, selectedModel);
       setMessages((current) => [
         ...current,
         { role: "assistant", content: response.data.answer },
@@ -62,7 +81,9 @@ export default function ChatWariga() {
           </div>
           <div>
             <h2 className="font-semibold text-baliDark">Asisten Wariga</h2>
-            <p className="mt-1 text-xs text-gray-500">Didukung oleh Groq AI</p>
+            <p className="mt-1 text-xs text-gray-500">
+              Model aktif: {chatModelOptions.find((item) => item.key === selectedModel)?.label}
+            </p>
           </div>
         </div>
         <button
@@ -76,6 +97,29 @@ export default function ChatWariga() {
         >
           <Trash2 size={17} />
         </button>
+      </div>
+
+      <div className="border-b border-baliBorder bg-white px-4 py-3 sm:px-5">
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-baliSoft p-1">
+          {chatModelOptions.map((option) => (
+            <button
+              className={`rounded-xl px-2 py-2 text-center text-xs font-semibold transition sm:text-sm ${
+                selectedModel === option.key
+                  ? "bg-white text-baliBrown shadow-sm"
+                  : "text-gray-500 hover:bg-white/70 hover:text-baliDark"
+              }`}
+              disabled={loading}
+              key={option.key}
+              onClick={() => setSelectedModel(option.key)}
+              type="button"
+            >
+              <span className="block truncate">{option.label}</span>
+              <span className="block truncate text-[11px] font-medium opacity-75">
+                {option.helper}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="h-[480px] space-y-4 overflow-y-auto bg-baliSoft/40 p-4 sm:p-6">
@@ -132,7 +176,7 @@ export default function ChatWariga() {
         <div className="flex gap-3">
           <textarea
             className="min-h-[48px] flex-1 resize-none rounded-2xl border border-baliBorder bg-white px-4 py-3 text-sm outline-none focus:border-baliBrown"
-            placeholder="Contoh: Apa informasi Wariga pada 1900-01-01?"
+            placeholder="Contoh: Apa informasi Wariga pada 1 Januari 1900?"
             rows="1"
             value={question}
             onChange={(event) => setQuestion(event.target.value)}

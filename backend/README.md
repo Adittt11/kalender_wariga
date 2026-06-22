@@ -5,7 +5,7 @@ PostgreSQL.
 
 ## Tabel Database
 
-- kalender_dawuh
+- kalender_bali
 - tambahan
 
 ## Cara menjalankan
@@ -15,11 +15,10 @@ cd backend
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
 python run.py
 ```
 
-Isi file `.env`:
+Pastikan file `.env` sudah tersedia di folder `backend`:
 
 ```env
 DB_USER=postgres
@@ -29,6 +28,13 @@ DB_PORT=5432
 DB_NAME=postgres
 GROQ_API_KEY=your-groq-api-key
 GROQ_MODEL=llama-3.3-70b-versatile
+OPENAI_API_KEY=your-openai-api-key
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_MINI_MODEL=gpt-5.4-mini
+OPENAI_LATEST_MODEL=gpt-5.5
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=admin
+ADMIN_SECRET=admin
 ```
 
 ## API

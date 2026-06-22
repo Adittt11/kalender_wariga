@@ -10,12 +10,12 @@ from app.config import GROQ_API_KEY, GROQ_MODEL
 
 GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-def request_groq(messages, max_completion_tokens=500, temperature=0.4):
+def request_groq(messages, max_completion_tokens=500, temperature=0.4, model=None):
     if not GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY belum diisi di file .env")
 
     payload = {
-        "model": GROQ_MODEL,
+        "model": model or GROQ_MODEL,
         "messages": messages,
         "temperature": temperature,
         "max_completion_tokens": max_completion_tokens,
@@ -153,3 +153,38 @@ def generate_cetak_kalender_ai(calendar_data):
             if str(item).strip()
         ][:4],
     }
+
+
+def chat_wariga(messages, database_context, model=None):
+    safe_messages = [
+        {
+            "role": "system",
+            "content": (
+                "Anda adalah asisten Tanya Wariga AI. Jawab dalam bahasa "
+                "Indonesia dengan ramah, ringkas, dan mudah dipahami. Anda "
+                "hanya boleh menjawab topik kalender Bali dan Wariga, seperti "
+                "wewaran, dewasa ayu, pakakalan, dawuh, sasih, purnama, tilem, "
+                "karakter kelahiran berdasarkan Wariga, serta pengetahuan yang "
+                "di-upload admin seperti Penglukatan, Pembayuhan, Tenung, "
+                "Permata, Lontar, dan pengetahuan tradisi Bali lain. Tolak secara "
+                "singkat pertanyaan di luar ruang lingkup tersebut. Jika "
+                "pertanyaan membutuhkan data kalender spesifik yang tidak "
+                "diberikan, jelaskan bahwa pengguna perlu menyebutkan tanggal "
+                "dengan jelas, misalnya 22 Juni 2026 atau besok, atau membuka "
+                "fitur kalender. Jangan mengarang fakta dan jangan menyatakan "
+                "interpretasi tradisi sebagai kepastian mutlak. Jangan gunakan "
+                "format Markdown, jangan gunakan tanda bintang, dan jangan "
+                "menebalkan teks. Jika membuat daftar, gunakan baris biasa "
+                "dengan angka atau tanda hubung tanpa simbol bintang.\n\n"
+                f"KONTEKS DATABASE BACKEND:\n{database_context}"
+            ),
+        },
+    ]
+    safe_messages.extend(messages[-10:])
+
+    return request_groq(
+        safe_messages,
+        max_completion_tokens=1400,
+        temperature=0.5,
+        model=model,
+    )

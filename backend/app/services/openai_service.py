@@ -1,7 +1,9 @@
 import json
 import ssl
+from datetime import datetime
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo
 
 import certifi
 
@@ -10,16 +12,24 @@ from app.config import OPENAI_API_KEY, OPENAI_MODEL
 OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
 
 
-def request_openai(messages, max_completion_tokens=500, temperature=0.4):
+def supports_custom_temperature(model_name):
+    return not str(model_name or "").startswith("gpt-5")
+
+
+def request_openai(messages, max_completion_tokens=500, temperature=0.4, model=None):
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY belum diisi di file .env")
 
+    selected_model = model or OPENAI_MODEL
     payload = {
-        "model": OPENAI_MODEL,
+        "model": selected_model,
         "messages": messages,
-        "temperature": temperature,
         "max_completion_tokens": max_completion_tokens,
     }
+
+    if temperature is not None and supports_custom_temperature(selected_model):
+        payload["temperature"] = temperature
+
     request = Request(
         OPENAI_CHAT_COMPLETIONS_URL,
         data=json.dumps(payload).encode("utf-8"),
@@ -48,7 +58,56 @@ def request_openai(messages, max_completion_tokens=500, temperature=0.4):
         raise RuntimeError("Respons OpenAI API tidak memiliki teks hasil") from error
 
 
-def chat_wariga(messages, database_context):
+def parse_json_response(raw_text):
+    cleaned = raw_text.strip()
+
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`").strip()
+
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip()
+
+    return json.loads(cleaned)
+
+
+def interpret_calendar_date(user_text):
+    reference_date = datetime.now(ZoneInfo("Asia/Makassar")).date().isoformat()
+    raw_result = request_openai(
+        [
+            {
+                "role": "system",
+                "content": (
+                    "Ubah tanggal yang disebutkan pengguna menjadi JSON valid. "
+                    "Gunakan tanggal referensi Asia/Makassar: "
+                    f"{reference_date}. "
+                    "Jika ada tanggal jelas, balas hanya JSON seperti "
+                    '{"date":"YYYY-MM-DD"}. Jika tidak ada tanggal jelas, balas '
+                    '{"date":null}. Jangan menambah teks lain.'
+                ),
+            },
+            {
+                "role": "user",
+                "content": user_text,
+            },
+        ],
+        max_completion_tokens=80,
+        temperature=0,
+    )
+
+    try:
+        parsed = parse_json_response(raw_result)
+        date_value = parsed.get("date")
+
+        if not date_value:
+            return None
+
+        datetime.strptime(date_value, "%Y-%m-%d")
+        return date_value
+    except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
+        return None
+
+
+def chat_wariga(messages, database_context, model=None):
     safe_messages = [
         {
             "role": "system",
@@ -63,9 +122,13 @@ def chat_wariga(messages, database_context):
                 "singkat pertanyaan di luar ruang lingkup tersebut. Jika "
                 "pertanyaan membutuhkan data kalender "
                 "spesifik yang tidak diberikan, jelaskan bahwa pengguna perlu "
-                "menyebutkan tanggal atau membuka fitur kalender. Jangan "
+                "menyebutkan tanggal dengan jelas, misalnya 22 Juni 2026 atau "
+                "besok, atau membuka fitur kalender. Jangan "
                 "mengarang fakta dan jangan menyatakan interpretasi tradisi "
-                "sebagai kepastian mutlak.\n\n"
+                "sebagai kepastian mutlak. Jangan gunakan format Markdown, "
+                "jangan gunakan tanda bintang, dan jangan menebalkan teks. "
+                "Jika membuat daftar, gunakan baris biasa dengan angka atau "
+                "tanda hubung tanpa simbol bintang.\n\n"
                 f"KONTEKS DATABASE BACKEND:\n{database_context}"
             ),
         },
@@ -74,6 +137,7 @@ def chat_wariga(messages, database_context):
 
     return request_openai(
         safe_messages,
-        max_completion_tokens=600,
+        max_completion_tokens=1400,
         temperature=0.5,
+        model=model,
     )

@@ -66,7 +66,7 @@ def get_all_kalender():
         result = conn.execute(
             text("""
                 SELECT *
-                FROM kalender_dawuh
+                FROM kalender_bali
             """)
         )
 
@@ -90,7 +90,7 @@ def get_kalender_rows_by_range(start, end, conn=None):
         return connection.execute(
             text("""
                 SELECT *
-                FROM kalender_dawuh
+                FROM kalender_bali
                 WHERE ("Tahun", "Bulan", "Tanggal")
                       BETWEEN (:start_year, :start_month, :start_day)
                           AND (:end_year, :end_month, :end_day)
@@ -118,7 +118,7 @@ def get_kalender_row_by_date(target, conn=None):
         return connection.execute(
             text("""
                 SELECT *
-                FROM kalender_dawuh
+                FROM kalender_bali
                 WHERE "Tahun" = :tahun
                   AND "Bulan" = :bulan
                   AND "Tanggal" = :tanggal
@@ -145,7 +145,7 @@ def get_kalender_rows_by_month(tahun, bulan, conn=None):
         return connection.execute(
             text("""
                 SELECT *
-                FROM kalender_dawuh
+                FROM kalender_bali
                 WHERE "Tahun" = :tahun
                   AND "Bulan" = :bulan
                 ORDER BY "Tanggal"
@@ -290,7 +290,13 @@ def parse_row(row, makna_rows):
 
         "pakakalan": gv(row, "Pakakalan"),
         "baik_buruk_hari": gv(row, "InformasiPakakalan"),
-        "dawuh": gv(row, "Dawuh"),
+        "dawuh": gv(row, "dawuh", gv(row, "Dawuh")),
+
+        "kajengkliwon": gv(row, "kajengkliwon"),
+        "harikeagamaan": gv(row, "harikeagamaan"),
+        "nyepi": gv(row, "Nyepi"),
+        "harinonbali": gv(row, "harinonbali"),
+        "piodalan": gv(row, "piodalan"),
 
         "status_purnama": status_purnama,
         "karakter_kelahiran": build_karakter_kelahiran(row, makna_rows),

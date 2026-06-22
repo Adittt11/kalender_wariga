@@ -370,7 +370,7 @@ export default function DewasaAyu() {
               <ResultColumn
                 emptyText="Tidak ada dewasa ayu-ala untuk pilihan ini."
                 tone="dipakai"
-                title="Dewasa Dipakai (Ayu - Ala)"
+                title="Dewasa Ala - Ayu"
                 items={results.dipakai}
               />
               <ResultColumn
