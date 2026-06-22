@@ -10,7 +10,6 @@ from app.config import GROQ_API_KEY, GROQ_MODEL
 
 GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions"
 
-
 def request_groq(messages, max_completion_tokens=500, temperature=0.4):
     if not GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY belum diisi di file .env")
@@ -154,34 +153,3 @@ def generate_cetak_kalender_ai(calendar_data):
             if str(item).strip()
         ][:4],
     }
-
-
-def chat_wariga(messages, database_context):
-    safe_messages = [
-        {
-            "role": "system",
-            "content": (
-                "Anda adalah asisten Tanya Wariga AI. Jawab dalam bahasa "
-                "Indonesia dengan ramah, ringkas, dan mudah dipahami. Anda "
-                "hanya boleh menjawab topik kalender Bali dan Wariga, seperti "
-                "wewaran, dewasa ayu, pakakalan, dawuh, sasih, purnama, tilem, "
-                "karakter kelahiran berdasarkan Wariga, serta pengetahuan yang "
-                "di-upload admin seperti Penglukatan, Pembayuhan, Tenung, "
-                "Permata, Lontar, dan pengetahuan tradisi Bali lain. Tolak secara "
-                "singkat pertanyaan di luar ruang lingkup tersebut. Jika "
-                "pertanyaan membutuhkan data kalender "
-                "spesifik yang tidak diberikan, jelaskan bahwa pengguna perlu "
-                "menyebutkan tanggal atau membuka fitur kalender. Jangan "
-                "mengarang fakta dan jangan menyatakan interpretasi tradisi "
-                "sebagai kepastian mutlak.\n\n"
-                f"KONTEKS DATABASE BACKEND:\n{database_context}"
-            ),
-        },
-    ]
-    safe_messages.extend(messages[-10:])
-
-    return request_groq(
-        safe_messages,
-        max_completion_tokens=600,
-        temperature=0.5,
-    )
