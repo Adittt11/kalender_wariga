@@ -1136,6 +1136,7 @@ body {
 [data-theme="dark"] body {
   background: #211b18;
   color: #f7eee5;
+  color-scheme: dark;
 }
 
 [data-theme="dark"] .app-shell {
@@ -1436,6 +1437,18 @@ body {
 [data-theme="dark"] .dashboard-lunar-purnama {
   background: #e0443d;
   color: #fff;
+}
+
+[data-theme="dark"] .dashboard-month-list li {
+  color: #d2c3b8;
+}
+
+[data-theme="dark"] .dashboard-month-list strong {
+  color: #f2c88c;
+}
+
+[data-theme="dark"] .dashboard-empty-text {
+  color: #9e8e83;
 }
 
 [data-theme="dark"] .rounded-2xl.bg-\[\#fdfcfb\],
