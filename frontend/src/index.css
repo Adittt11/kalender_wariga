@@ -1751,11 +1751,12 @@ body {
 }
 
 .print-calendar-export-host {
-  left: -100000px;
+  left: 0;
   pointer-events: none;
   position: fixed;
   top: 0;
   width: 680px;
+  z-index: -1;
 }
 
 .print-match {

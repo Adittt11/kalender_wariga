@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarDays, CheckSquare, CircleCheck, CircleX } from "lucide-react";
 import { toPng } from "html-to-image";
 import { createRoot } from "react-dom/client";
+import { flushSync } from "react-dom";
+import fixWebmDuration from "fix-webm-duration";
 import DownloadCard from "../components/DownloadCard";
 import { generateCalendar, generatePrintAi } from "../services/calendarApi";
 import ornament from "../assets/ornamen.png";
@@ -10,8 +12,9 @@ const initialStartDate = "1900-01-01";
 const initialEndDate = "1900-01-02";
 const exportCalendarWidth = 680;
 const videoCanvasWidth = 1080;
-const videoFrameDuration = 3500;
-const videoFps = 30;
+const videoFrameDuration = 3000;
+const videoEndHoldDuration = 500;
+const videoFps = 10;
 
 function formatDate(date) {
   if (!date) {
@@ -58,6 +61,18 @@ function getCalendarTheme(status) {
   }
 
   return "print-calendar-regular";
+}
+
+function buildPrintFallback(data) {
+  const dayGuidance = splitValues(data.baik_buruk_hari, ";");
+
+  return {
+    ...data,
+    hal_baik: dayGuidance.slice(0, 4),
+    hal_dihindari: [],
+    ai_ready: true,
+    ai_fallback: true,
+  };
 }
 
 function PrintableCalendar({ calendarRef, data }) {
@@ -238,11 +253,16 @@ export default function CetakKalender() {
           );
         }
       } catch (err) {
+        const fallbackPreview = buildPrintFallback(preview);
+        aiCacheRef.current[preview.tanggal_lengkap] = fallbackPreview;
+
         if (!cancelled) {
-          setError(
-            err.response?.data?.detail ||
-              err.message ||
-              "Ringkasan AI kalender gagal dibuat."
+          setCalendarData((current) =>
+            current.map((item) =>
+              item.tanggal_lengkap === preview.tanggal_lengkap
+                ? fallbackPreview
+                : item
+            )
           );
         }
       } finally {
@@ -364,12 +384,19 @@ export default function CetakKalender() {
         continue;
       }
 
-      const response = await generatePrintAi(item.tanggal_lengkap);
-      const enrichedItem = {
-        ...item,
-        ...response.data,
-        ai_ready: true,
-      };
+      let enrichedItem;
+
+      try {
+        const response = await generatePrintAi(item.tanggal_lengkap);
+        enrichedItem = {
+          ...item,
+          ...response.data,
+          ai_ready: true,
+        };
+      } catch (err) {
+        enrichedItem = buildPrintFallback(item);
+      }
+
       aiCacheRef.current[item.tanggal_lengkap] = enrichedItem;
       enrichedCalendars.push(enrichedItem);
     }
@@ -386,19 +413,21 @@ export default function CetakKalender() {
 
     host.className = "print-calendar-export-host";
     document.body.appendChild(host);
-    root.render(
-      <div>
-        {enrichedCalendars.map((item, index) => (
-          <PrintableCalendar
-            calendarRef={(element) => {
-              calendarElements[index] = element;
-            }}
-            data={item}
-            key={item.tanggal_lengkap}
-          />
-        ))}
-      </div>
-    );
+    flushSync(() => {
+      root.render(
+        <div>
+          {enrichedCalendars.map((item, index) => (
+            <PrintableCalendar
+              calendarRef={(element) => {
+                calendarElements[index] = element;
+              }}
+              data={item}
+              key={item.tanggal_lengkap}
+            />
+          ))}
+        </div>
+      );
+    });
 
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
@@ -406,6 +435,10 @@ export default function CetakKalender() {
       const images = [];
 
       for (const calendar of calendarElements) {
+        if (!calendar) {
+          throw new Error("Kalender gagal dirender untuk export.");
+        }
+
         images.push(await renderCalendarImage(calendar));
       }
 
@@ -448,6 +481,11 @@ export default function CetakKalender() {
     }
 
     const images = await Promise.all(dataUrls.map(loadImageFromDataUrl));
+
+    if (!images.length) {
+      throw new Error("Tidak ada frame kalender yang bisa dibuat menjadi video.");
+    }
+
     const maxAspectRatio = Math.max(
       ...images.map((image) => image.naturalHeight / image.naturalWidth)
     );
@@ -460,7 +498,7 @@ export default function CetakKalender() {
     const stream = canvas.captureStream(videoFps);
     const recorder = new MediaRecorder(stream, {
       mimeType,
-      videoBitsPerSecond: 4_000_000,
+      videoBitsPerSecond: 1_500_000,
     });
     const chunks = [];
 
@@ -497,18 +535,59 @@ export default function CetakKalender() {
       );
     }
 
-    recorder.start();
+    const totalDuration = (images.length * videoFrameDuration) + videoEndHoldDuration;
 
-    for (const image of images) {
-      drawImage(image);
-      await new Promise((resolve) => setTimeout(resolve, videoFrameDuration));
-    }
+    recorder.start(1000);
+
+    await new Promise((resolve) => {
+      const timelineStartedAt = performance.now();
+      const frameInterval = 1000 / videoFps;
+
+      function drawFrame() {
+        const now = performance.now();
+        const elapsed = now - timelineStartedAt;
+        const timelineElapsed = Math.min(
+          elapsed,
+          Math.max(0, (images.length * videoFrameDuration) - 1)
+        );
+        const imageIndex = Math.max(
+          0,
+          Math.min(
+            images.length - 1,
+            Math.floor(timelineElapsed / videoFrameDuration)
+          )
+        );
+        const currentImage = images[imageIndex];
+
+        drawImage(currentImage);
+
+        if (elapsed >= totalDuration) {
+          drawImage(images[images.length - 1]);
+          resolve();
+          return;
+        }
+
+        setTimeout(drawFrame, frameInterval);
+      }
+
+      drawFrame();
+    });
 
     recorder.stop();
     await stopped;
     stream.getTracks().forEach((track) => track.stop());
 
-    return new Blob(chunks, { type: mimeType });
+    const videoBlob = new Blob(chunks, { type: mimeType });
+
+    if (mimeType.includes("webm")) {
+      return fixWebmDuration(
+        videoBlob,
+        totalDuration,
+        { logger: false }
+      );
+    }
+
+    return videoBlob;
   }
 
   function downloadBlob(blob, fileName) {
