@@ -2246,3 +2246,14 @@ body {
     padding: 12mm 14mm 9mm;
   }
 }
+
+/* Sembunyikan scrollbar tapi tetap bisa di-scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE dan Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+

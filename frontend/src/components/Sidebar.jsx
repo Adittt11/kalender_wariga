@@ -68,7 +68,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Menu */}
-        <nav className="relative z-10 flex-1 space-y-2 overflow-y-auto px-4 pb-[330px]">
+        <nav className="relative z-10 flex-1 space-y-2 overflow-y-auto px-4 pb-20 no-scrollbar">
           {menus.map((menu) => {
             const Icon = menu.icon;
 
