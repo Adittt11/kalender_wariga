@@ -251,7 +251,7 @@ export default function ChatWariga() {
   return (
     <section className="card grid overflow-hidden lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="border-b border-baliBorder bg-white lg:border-b-0 lg:border-r">
-        <div className="border-b border-baliBorder p-4">
+        <div className="flex h-[86px] items-center border-b border-baliBorder px-4">
           <button
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-baliBorder bg-baliSoft px-4 py-3 text-sm font-semibold text-baliBrown transition hover:bg-baliCream"
             type="button"
@@ -306,7 +306,7 @@ export default function ChatWariga() {
       </aside>
 
       <div className="min-w-0">
-        <div className="flex items-center justify-between gap-4 border-b border-baliBorder p-5">
+        <div className="flex h-[86px] items-center justify-between gap-4 border-b border-baliBorder px-5">
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-baliCream p-3 text-baliBrown">
               <Bot size={22} />
