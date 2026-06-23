@@ -8,7 +8,7 @@ const initialMessages = [
   {
     role: "assistant",
     content:
-      "Om swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, Permata, dan Lontar. Untuk detail kalender dari database, sebutkan tanggal secara natural, misalnya 22 Juni 2026, besok, atau 22/06/2026.",
+      "Om Swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, Permata, dan Lontar. Untuk detail kalender dari database, sebutkan tanggal secara natural, misalnya 22 Juni 2026, besok, atau 22/06/2026.",
   },
 ];
 
@@ -40,12 +40,20 @@ function formatHistoryTime(value) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
+  try {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) {
+      return "";
+    }
+    return new Intl.DateTimeFormat("id-ID", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(date);
+  } catch {
+    return "";
+  }
 }
 
 function loadChatHistory() {
@@ -228,12 +236,20 @@ export default function ChatWariga() {
     setLoading(true);
 
     try {
-      const response = await sendChatMessages(nextMessages, selectedModel);
+      // Hanya kirim 20 pesan terakhir ke backend agar tidak melampaui batasan validasi max_length=20
+      const messagesToSend = nextMessages.slice(-20);
+      const response = await sendChatMessages(messagesToSend, selectedModel);
+      const answer = response?.data?.answer || response?.answer || "";
+
+      if (!answer) {
+        throw new Error("Respons AI tidak memiliki teks jawaban yang valid.");
+      }
+
       updateConversation(targetConversationId, (conversation) => ({
         ...conversation,
         messages: [
-          ...conversation.messages,
-          { role: "assistant", content: response.data.answer },
+          ...(conversation.messages || []),
+          { role: "assistant", content: answer },
         ],
         updatedAt: new Date().toISOString(),
       }));
@@ -314,7 +330,7 @@ export default function ChatWariga() {
             <div>
               <h2 className="font-semibold text-baliDark">Asisten Wariga</h2>
               <p className="mt-1 text-xs text-gray-500">
-                Model aktif: {chatModelOptions.find((item) => item.key === selectedModel)?.label}
+                Model aktif: {chatModelOptions.find((item) => item.key === selectedModel)?.label || selectedModel}
               </p>
             </div>
           </div>

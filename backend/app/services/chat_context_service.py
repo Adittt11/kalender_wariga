@@ -90,6 +90,15 @@ CALENDAR_KEYWORDS = (
     "lontar",
     "pengetahuan",
     "knowledge",
+    "odalan",
+    "hari raya",
+    "hari raya hindu",
+    "rahinan",
+    "kajeng kliwon",
+    "kajengkliwon",
+    "hari nasional",
+    "libur nasional",
+    "nasional",
 )
 DEWASA_QUERY_KEYWORDS = (
     "hari baik",
@@ -110,22 +119,30 @@ DEWASA_GROUP_LABELS = {
 }
 MONTHLY_CALENDAR_FIELDS = {
     "harinonbali": {
-        "label": "Hari Non-Bali",
-        "keywords": ("hari non bali", "non bali", "harinonbali"),
+        "label": "Hari Nasional",
+        "keywords": ("hari non bali", "non bali", "harinonbali", "hari nasional", "libur nasional", "nasional"),
     },
     "harikeagamaan": {
-        "label": "Hari Keagamaan",
-        "keywords": ("hari keagamaan", "rahinan", "hari raya"),
+        "label": "Hari Raya Hindu / Rahinan",
+        "keywords": (
+            "hari keagamaan",
+            "rahinan",
+            "hari raya",
+            "hari raya hindu",
+            "hindu",
+            "purnama",
+            "tilem",
+            "kajeng kliwon",
+            "kajengkliwon",
+            "nyepi",
+        ),
     },
     "piodalan": {
-        "label": "Piodalan",
-        "keywords": ("piodalan",),
-    },
-    "nyepi": {
-        "label": "Nyepi",
-        "keywords": ("nyepi",),
+        "label": "Piodalan / Odalan Pura",
+        "keywords": ("piodalan", "odalan", "piodalan pura", "odalan pura", "odalan-pura"),
     },
 }
+
 
 
 def get_latest_user_message(messages):
@@ -307,24 +324,58 @@ def build_monthly_calendar_context(query):
     items = []
 
     for row in rows:
-        value = row.get(field_name)
+        if field_name == "harikeagamaan":
+            # Gabungkan status_purnama, kajengkliwon, nyepi, dan harikeagamaan
+            parts = []
 
-        if not value or str(value).strip() == "-":
-            continue
+            # 1. Hari Keagamaan
+            val_keagamaan = row.get("harikeagamaan")
+            if val_keagamaan and str(val_keagamaan).strip() != "-":
+                parts.append(str(val_keagamaan).strip())
 
-        items.append(
-            {
-                "tanggal": row.get("tanggal_lengkap"),
-                "nilai": str(value).strip(),
-            }
-        )
+            # 2. Status Purnama/Tilem
+            val_purnama = row.get("status_purnama")
+            if val_purnama and str(val_purnama).strip() != "-":
+                parts.append(str(val_purnama).strip())
+
+            # 3. Kajeng Kliwon
+            val_kajeng = row.get("kajengkliwon")
+            if val_kajeng and str(val_kajeng).strip() != "-":
+                parts.append(f"Kajeng Kliwon ({str(val_kajeng).strip()})")
+
+            # 4. Nyepi
+            val_nyepi = row.get("nyepi")
+            if val_nyepi and str(val_nyepi).strip() != "-":
+                parts.append(f"Nyepi ({str(val_nyepi).strip()})")
+
+            if parts:
+                items.append(
+                    {
+                        "tanggal": row.get("tanggal_lengkap"),
+                        "nilai": ", ".join(parts),
+                    }
+                )
+        else:
+            value = row.get(field_name)
+
+            if not value or str(value).strip() == "-":
+                continue
+
+            items.append(
+                {
+                    "tanggal": row.get("tanggal_lengkap"),
+                    "nilai": str(value).strip(),
+                }
+            )
 
     lines = [
         "PERTANYAAN KALENDER BULANAN TERDETEKSI:",
         f"Jenis data: {label}",
         f"Periode: {period_label}",
         "Gunakan hasil database berikut sebagai sumber utama. "
-        "Jika daftar kosong, katakan tidak ada data pada periode tersebut.",
+        "Daftar ini hanya menampilkan tanggal yang memiliki event/hari raya. "
+        "Jika suatu tanggal tidak ada dalam daftar di bawah, artinya pada tanggal tersebut "
+        "memang TIDAK ADA hari raya atau hari nasional (bukan datanya yang tidak lengkap atau hilang).",
         "",
         f"Daftar {label}:",
     ]
