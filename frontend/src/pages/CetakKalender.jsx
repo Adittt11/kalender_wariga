@@ -13,8 +13,8 @@ const initialEndDate = "1900-01-02";
 const exportCalendarWidth = 680;
 const videoCanvasWidth = 1080;
 const videoFrameDuration = 3000;
-const videoEndHoldDuration = 500;
-const videoFps = 10;
+const videoTransitionDuration = 600;
+const videoFps = 24;
 
 function formatDate(date) {
   if (!date) {
@@ -407,46 +407,46 @@ export default function CetakKalender() {
 
   async function renderCalendarRange() {
     const enrichedCalendars = await enrichCalendarRange();
-    const host = document.createElement("div");
-    const calendarElements = [];
-    const root = createRoot(host);
+    const images = [];
 
-    host.className = "print-calendar-export-host";
-    document.body.appendChild(host);
-    flushSync(() => {
-      root.render(
-        <div>
-          {enrichedCalendars.map((item, index) => (
+    for (const item of enrichedCalendars) {
+      const host = document.createElement("div");
+      let calendarElement = null;
+      const root = createRoot(host);
+
+      host.className = "print-calendar-export-host";
+      document.body.appendChild(host);
+
+      try {
+        flushSync(() => {
+          root.render(
             <PrintableCalendar
               calendarRef={(element) => {
-                calendarElements[index] = element;
+                calendarElement = element;
               }}
               data={item}
-              key={item.tanggal_lengkap}
             />
-          ))}
-        </div>
-      );
-    });
+          );
+        });
 
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-    try {
-      const images = [];
-
-      for (const calendar of calendarElements) {
-        if (!calendar) {
-          throw new Error("Kalender gagal dirender untuk export.");
+        if (!calendarElement) {
+          throw new Error(`Kalender ${item.tanggal_lengkap} gagal dirender untuk export.`);
         }
 
-        images.push(await renderCalendarImage(calendar));
+        images.push(await renderCalendarImage(calendarElement));
+      } finally {
+        root.unmount();
+        host.remove();
       }
-
-      return images;
-    } finally {
-      root.unmount();
-      host.remove();
     }
+
+    if (images.length !== enrichedCalendars.length) {
+      throw new Error("Jumlah frame video tidak sesuai dengan rentang tanggal.");
+    }
+
+    return images;
   }
 
   function getExportFileName(extension) {
@@ -498,7 +498,7 @@ export default function CetakKalender() {
     const stream = canvas.captureStream(videoFps);
     const recorder = new MediaRecorder(stream, {
       mimeType,
-      videoBitsPerSecond: 1_500_000,
+      videoBitsPerSecond: 4_000_000,
     });
     const chunks = [];
 
@@ -515,10 +515,7 @@ export default function CetakKalender() {
       }, { once: true });
     });
 
-    function drawImage(image) {
-      context.fillStyle = "#fffdfb";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-
+    function drawImage(image, alpha = 1, clear = true) {
       const scale = Math.min(
         canvas.width / image.naturalWidth,
         canvas.height / image.naturalHeight
@@ -526,6 +523,12 @@ export default function CetakKalender() {
       const width = image.naturalWidth * scale;
       const height = image.naturalHeight * scale;
 
+      if (clear) {
+        context.fillStyle = "#fffdfb";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      context.globalAlpha = alpha;
       context.drawImage(
         image,
         (canvas.width - width) / 2,
@@ -533,33 +536,57 @@ export default function CetakKalender() {
         width,
         height
       );
+      context.globalAlpha = 1;
     }
 
-    const totalDuration = (images.length * videoFrameDuration) + videoEndHoldDuration;
+    const totalDuration = images.length * videoFrameDuration;
 
-    recorder.start(1000);
+    function drawTimelineFrame(elapsed) {
+      const timelineElapsed = Math.min(elapsed, Math.max(0, totalDuration - 1));
+      const imageIndex = Math.max(
+        0,
+        Math.min(
+          images.length - 1,
+          Math.floor(timelineElapsed / videoFrameDuration)
+        )
+      );
+      const segmentElapsed = timelineElapsed - (imageIndex * videoFrameDuration);
+      const currentImage = images[imageIndex];
+      const nextImage = images[Math.min(images.length - 1, imageIndex + 1)];
+      const transitionStart = videoFrameDuration - videoTransitionDuration;
+
+      drawImage(currentImage);
+
+      if (
+        imageIndex < images.length - 1 &&
+        segmentElapsed >= transitionStart
+      ) {
+        const transitionProgress = Math.min(
+          1,
+          (segmentElapsed - transitionStart) / videoTransitionDuration
+        );
+
+        drawImage(nextImage, transitionProgress, false);
+      }
+    }
+
+    drawImage(images[0]);
+    recorder.start();
 
     await new Promise((resolve) => {
       const timelineStartedAt = performance.now();
       const frameInterval = 1000 / videoFps;
+      let lastDrawAt = 0;
 
-      function drawFrame() {
-        const now = performance.now();
+      function drawFrame(now) {
+        if (now - lastDrawAt < frameInterval) {
+          requestAnimationFrame(drawFrame);
+          return;
+        }
+
+        lastDrawAt = now;
         const elapsed = now - timelineStartedAt;
-        const timelineElapsed = Math.min(
-          elapsed,
-          Math.max(0, (images.length * videoFrameDuration) - 1)
-        );
-        const imageIndex = Math.max(
-          0,
-          Math.min(
-            images.length - 1,
-            Math.floor(timelineElapsed / videoFrameDuration)
-          )
-        );
-        const currentImage = images[imageIndex];
-
-        drawImage(currentImage);
+        drawTimelineFrame(elapsed);
 
         if (elapsed >= totalDuration) {
           drawImage(images[images.length - 1]);
@@ -567,10 +594,10 @@ export default function CetakKalender() {
           return;
         }
 
-        setTimeout(drawFrame, frameInterval);
+        requestAnimationFrame(drawFrame);
       }
 
-      drawFrame();
+      requestAnimationFrame(drawFrame);
     });
 
     recorder.stop();
