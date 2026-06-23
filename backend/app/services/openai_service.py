@@ -7,9 +7,10 @@ from zoneinfo import ZoneInfo
 
 import certifi
 
-from app.config import OPENAI_API_KEY, OPENAI_MODEL
+from app.config import OPENAI_API_KEY, OPENAI_MODEL, OPENAI_EMBEDDING_MODEL
 
 OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
+OPENAI_EMBEDDINGS_URL = "https://api.openai.com/v1/embeddings"
 
 
 def supports_custom_temperature(model_name):
@@ -143,3 +144,41 @@ def chat_wariga(messages, database_context, model=None):
         temperature=0.5,
         model=model,
     )
+
+
+def request_openai_embeddings(text_value, model=None):
+    if not OPENAI_API_KEY:
+        raise ValueError("OPENAI_API_KEY belum diisi di file .env")
+
+    selected_model = model or OPENAI_EMBEDDING_MODEL
+    payload = {
+        "model": selected_model,
+        "input": text_value,
+    }
+
+    request = Request(
+        OPENAI_EMBEDDINGS_URL,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+            "User-Agent": "kalender-wariga/1.0",
+        },
+        method="POST",
+    )
+
+    try:
+        ssl_context = ssl.create_default_context(cafile=certifi.where())
+
+        with urlopen(request, timeout=30, context=ssl_context) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except HTTPError as error:
+        detail = error.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"OpenAI Embeddings API gagal ({error.code}): {detail}") from error
+    except URLError as error:
+        raise RuntimeError(f"Tidak dapat terhubung ke OpenAI API: {error.reason}") from error
+
+    try:
+        return result["data"][0]["embedding"]
+    except (KeyError, IndexError, AttributeError, TypeError) as error:
+        raise RuntimeError("Respons OpenAI Embeddings API tidak memiliki data embedding") from error

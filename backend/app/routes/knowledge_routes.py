@@ -6,6 +6,7 @@ from app.services.knowledge_service import (
     create_knowledge_document,
     delete_knowledge_document,
     list_knowledge_documents,
+    reembed_all_documents,
 )
 
 
@@ -58,7 +59,6 @@ def knowledge_upload(
         "data": document,
     }
 
-
 @router.delete("/{document_id}")
 def knowledge_delete(document_id: int, _admin=Depends(require_admin)):
     try:
@@ -71,4 +71,19 @@ def knowledge_delete(document_id: int, _admin=Depends(require_admin)):
     return {
         "success": True,
         "data": deleted_document,
+    }
+
+
+@router.post("/reembed")
+def knowledge_reembed(_admin=Depends(require_admin)):
+    try:
+        count = reembed_all_documents()
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=500, detail=str(error)) from error
+
+    return {
+        "success": True,
+        "message": f"Berhasil memperbarui embedding untuk {count} dokumen.",
     }

@@ -8,6 +8,7 @@ from pathlib import Path
 from sqlalchemy import text
 
 from app.services.database import engine
+from app.services.openai_service import request_openai_embeddings
 
 
 KNOWLEDGE_CATEGORIES = (
@@ -19,7 +20,7 @@ KNOWLEDGE_CATEGORIES = (
     "Wariga",
     "Pengetahuan Lain",
 )
-EMBEDDING_DIMENSIONS = 128
+EMBEDDING_DIMENSIONS = 1536
 MAX_CHUNK_CHARACTERS = 1200
 CHUNK_OVERLAP_CHARACTERS = 180
 TOKEN_PATTERN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ0-9_]+")
@@ -77,23 +78,15 @@ def tokenize(text_value):
 
 
 def build_embedding(text_value):
-    vector = [0.0] * EMBEDDING_DIMENSIONS
-
-    for token in tokenize(text_value):
-        digest = hashlib.md5(token.encode("utf-8")).digest()
-        index = int.from_bytes(digest[:4], "big") % EMBEDDING_DIMENSIONS
-        sign = 1 if digest[4] % 2 == 0 else -1
-        vector[index] += sign
-
-    norm = math.sqrt(sum(value * value for value in vector))
-
-    if norm == 0:
-        return vector
-
-    return [round(value / norm, 6) for value in vector]
+    try:
+        return request_openai_embeddings(text_value)
+    except Exception as error:
+        raise RuntimeError(f"Gagal membuat embedding menggunakan OpenAI: {str(error)}") from error
 
 
 def cosine_similarity(left, right):
+    if not left or not right or len(left) != len(right):
+        return 0.0
     return sum(a * b for a, b in zip(left, right))
 
 
@@ -381,3 +374,43 @@ def build_knowledge_context(query):
         "Jika konteks tidak cukup, katakan bahwa data belum tersedia dan jangan mengarang.\n"
         + "\n\n".join(context_blocks)
     )
+
+
+def reembed_all_documents():
+    with engine.begin() as conn:
+        ensure_knowledge_tables(conn)
+
+        # 1. Ambil semua dokumen
+        rows = conn.execute(
+            text("SELECT id, category, raw_text FROM knowledge_documents")
+        )
+        documents = [dict(row._mapping) for row in rows]
+
+        if not documents:
+            return 0
+
+        # 2. Hapus seluruh data chunk lama
+        conn.execute(text("DELETE FROM knowledge_chunks"))
+
+        # 3. Proses re-chunk dan re-embed untuk masing-masing dokumen
+        for doc in documents:
+            chunks = chunk_text(doc["raw_text"])
+
+            for index, chunk in enumerate(chunks):
+                conn.execute(
+                    text("""
+                        INSERT INTO knowledge_chunks
+                            (document_id, category, chunk_index, content, embedding)
+                        VALUES
+                            (:document_id, :category, :chunk_index, :content, :embedding)
+                    """),
+                    {
+                        "document_id": doc["id"],
+                        "category": doc["category"],
+                        "chunk_index": index,
+                        "content": chunk,
+                        "embedding": json.dumps(build_embedding(chunk)),
+                    },
+                )
+
+        return len(documents)
