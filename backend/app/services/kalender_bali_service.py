@@ -118,15 +118,9 @@ def get_kalender_bali_by_date(tanggal):
             text("""
                 SELECT *, "Pengelong" AS "Panglong"
                 FROM kalender_bali
-                WHERE "Tahun" = :tahun
-                  AND "Bulan" = :bulan
-                  AND "Tanggal" = :tanggal
+                WHERE date = :target
             """),
-            {
-                "tahun": target.year,
-                "bulan": target.month,
-                "tanggal": target.day,
-            },
+            {"target": target},
         ).mappings().first()
 
         return parse_row(dict(row)) if row else None

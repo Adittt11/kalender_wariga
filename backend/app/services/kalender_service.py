@@ -91,18 +91,12 @@ def get_kalender_rows_by_range(start, end, conn=None):
             text("""
                 SELECT *
                 FROM kalender_bali
-                WHERE ("Tahun", "Bulan", "Tanggal")
-                      BETWEEN (:start_year, :start_month, :start_day)
-                          AND (:end_year, :end_month, :end_day)
-                ORDER BY "Tahun", "Bulan", "Tanggal"
+                WHERE date BETWEEN :start AND :end
+                ORDER BY date
             """),
             {
-                "start_year": start.year,
-                "start_month": start.month,
-                "start_day": start.day,
-                "end_year": end.year,
-                "end_month": end.month,
-                "end_day": end.day,
+                "start": start,
+                "end": end,
             },
         )
 
@@ -119,14 +113,10 @@ def get_kalender_row_by_date(target, conn=None):
             text("""
                 SELECT *
                 FROM kalender_bali
-                WHERE "Tahun" = :tahun
-                  AND "Bulan" = :bulan
-                  AND "Tanggal" = :tanggal
+                WHERE date = :target
             """),
             {
-                "tahun": target.year,
-                "bulan": target.month,
-                "tanggal": target.day,
+                "target": target,
             },
         ).mappings().first()
 
@@ -138,6 +128,7 @@ def get_kalender_row_by_date(target, conn=None):
         row = execute(conn)
 
         return dict(row) if row else None
+
 
 
 def get_kalender_rows_by_month(tahun, bulan, conn=None):

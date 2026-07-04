@@ -53,15 +53,9 @@ def get_kalender_bali_birth_data(target, conn):
         text("""
             SELECT *
             FROM kalender_bali
-            WHERE "Tahun" = :tahun
-              AND "Bulan" = :bulan
-              AND "Tanggal" = :tanggal
+            WHERE date = :target
         """),
-        {
-            "tahun": target.year,
-            "bulan": target.month,
-            "tanggal": target.day,
-        },
+        {"target": target},
     ).mappings().first()
 
     if not row:
