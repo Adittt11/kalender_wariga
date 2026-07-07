@@ -13,8 +13,12 @@ router = APIRouter()
 
 
 @router.get("/date/{tanggal}")
-def calendar_by_date(tanggal: str):
-    data = get_kalender_by_date(tanggal)
+def calendar_by_date(tanggal: str, aspects: str = None):
+    aspect_list = None
+    if aspects:
+        aspect_list = [a.strip().lower() for a in aspects.split(",") if a.strip()]
+
+    data = get_kalender_by_date(tanggal, aspects=aspect_list)
 
     if data is None:
         raise HTTPException(
@@ -29,8 +33,12 @@ def calendar_by_date(tanggal: str):
 
 
 @router.get("/month/{tahun}/{bulan}")
-def calendar_by_month(tahun: int, bulan: int):
-    data = get_kalender_by_month(tahun, bulan)
+def calendar_by_month(tahun: int, bulan: int, aspects: str = None):
+    aspect_list = None
+    if aspects:
+        aspect_list = [a.strip().lower() for a in aspects.split(",") if a.strip()]
+
+    data = get_kalender_by_month(tahun, bulan, aspects=aspect_list)
 
     return {
         "success": True,
@@ -40,8 +48,12 @@ def calendar_by_month(tahun: int, bulan: int):
 
 
 @router.post("/date/{tanggal}/character-ai")
-def calendar_character_ai(tanggal: str):
-    data = get_kalender_by_date(tanggal)
+def calendar_character_ai(tanggal: str, aspects: str = None):
+    aspect_list = None
+    if aspects:
+        aspect_list = [a.strip().lower() for a in aspects.split(",") if a.strip()]
+
+    data = get_kalender_by_date(tanggal, aspects=aspect_list)
 
     if data is None:
         raise HTTPException(
@@ -68,8 +80,12 @@ def calendar_character_ai(tanggal: str):
 
 
 @router.post("/date/{tanggal}/print-ai")
-def calendar_print_ai(tanggal: str):
-    data = get_kalender_by_date(tanggal)
+def calendar_print_ai(tanggal: str, aspects: str = None):
+    aspect_list = None
+    if aspects:
+        aspect_list = [a.strip().lower() for a in aspects.split(",") if a.strip()]
+
+    data = get_kalender_by_date(tanggal, aspects=aspect_list)
 
     if data is None:
         raise HTTPException(

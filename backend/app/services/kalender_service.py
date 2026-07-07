@@ -165,6 +165,28 @@ def get_makna_rows(conn):
     return [dict(row._mapping) for row in result]
 
 
+def get_keterangan_wuku_rows(conn):
+    result = conn.execute(
+        text("""
+            SELECT *
+            FROM keterangan_wuku
+        """)
+    )
+
+    return [dict(row._mapping) for row in result]
+
+
+def get_keterangan_pancawara_saptawara_rows(conn):
+    result = conn.execute(
+        text("""
+            SELECT *
+            FROM keterangan_pancawara_saptawara
+        """)
+    )
+
+    return [dict(row._mapping) for row in result]
+
+
 def get_deskripsi(makna_rows, col_nama, col_makna, target_val):
     if target_val == "-":
         return "-"
@@ -186,49 +208,87 @@ def get_deskripsi(makna_rows, col_nama, col_makna, target_val):
     return "-"
 
 
-def build_karakter_kelahiran(row, makna_rows):
-    n_pal = gv(row, "Palalintangan")
-    n_par = gv(row, "Pararasan")
-    n_pra = gv(row, "PratitiSamutpada")
-    n_eka = gv(row, "Ekajalarsi")
+def build_karakter_kelahiran(row, makna_rows, wuku_rows, ps_rows, aspects=None):
+    if aspects is not None:
+        aspects = [a.lower().strip() for a in aspects]
 
-    m_pal = get_deskripsi(
-        makna_rows,
-        "Palalintangan",
-        "Makna_Palalintangan",
-        n_pal
-    )
+    def is_enabled(name):
+        if not aspects:
+            return True
+        return name in aspects
 
-    m_par = get_deskripsi(
-        makna_rows,
-        "Pararasan",
-        "Makna_Pararasan",
-        n_par
-    )
+    parts = []
 
-    m_pra = get_deskripsi(
-        makna_rows,
-        "PratitiSamutpada",
-        "Makna_PratitiSamutpada",
-        n_pra
-    )
+    # 1. Palalintangan
+    if is_enabled("palalintangan"):
+        n_pal = gv(row, "Palalintangan")
+        m_pal = get_deskripsi(makna_rows, "Palalintangan", "Makna_Palalintangan", n_pal)
+        parts.append(f"Palalintangan {n_pal}: {m_pal}")
 
-    m_eka = get_deskripsi(
-        makna_rows,
-        "Ekajalarsi",
-        "Makna_Ekajalarsi",
-        n_eka
-    )
+    # 2. Ekajalarsi
+    if is_enabled("ekajalarsi"):
+        n_eka = gv(row, "Ekajalarsi")
+        m_eka = get_deskripsi(makna_rows, "Ekajalarsi", "Makna_Ekajalarsi", n_eka)
+        parts.append(f"Ekajalarsi {n_eka}: {m_eka}")
 
-    return (
-        f"Palalintangan {n_pal}: {m_pal}. "
-        f"Ekajalarsi {n_eka}: {m_eka}. "
-        f"Pratiti Samutpada {n_pra}: {m_pra}. "
-        f"Pararasan {n_par}: {m_par}."
-    )
+    # 3. Pratiti Samutpada
+    if is_enabled("pratiti_samutpada") or is_enabled("pratiti"):
+        n_pra = gv(row, "PratitiSamutpada")
+        m_pra = get_deskripsi(makna_rows, "PratitiSamutpada", "Makna_PratitiSamutpada", n_pra)
+        parts.append(f"Pratiti Samutpada {n_pra}: {m_pra}")
+
+    # 4. Pararasan
+    if is_enabled("pararasan"):
+        n_par = gv(row, "Pararasan")
+        m_par = get_deskripsi(makna_rows, "Pararasan", "Makna_Pararasan", n_par)
+        parts.append(f"Pararasan {n_par}: {m_par}")
+
+    # 5. Wuku
+    if is_enabled("wuku"):
+        n_wuku = gv(row, "Wuku")
+        m_wuku = "-"
+        wuku_clean = str(n_wuku).strip().lower()
+        for r in wuku_rows:
+            if str(r.get("Wuku", "")).strip().lower() == wuku_clean:
+                m_wuku = str(r.get("Keterangan", "-")).strip()
+                break
+        parts.append(f"Wuku {n_wuku}: {m_wuku}")
+
+    # 6. Pancawara
+    if is_enabled("pancawara"):
+        n_pan = gv(row, "Pancawara")
+        m_pan = "-"
+        pan_clean = str(n_pan).strip().lower()
+        for r in ps_rows:
+            p_val = r.get("pancawara")
+            if p_val and str(p_val).strip().lower() == pan_clean:
+                m_pan = str(r.get("keterangan_pancawara", "-")).strip()
+                break
+        parts.append(f"Pancawara {n_pan}: {m_pan}")
+
+    # 7. Saptawara
+    if is_enabled("saptawara"):
+        n_sap = gv(row, "Saptawara")
+        m_sap = "-"
+        sap_clean = str(n_sap).strip().lower()
+        if sap_clean == "wraspati":
+            sap_clean = "wrespati"
+        for r in ps_rows:
+            s_val = r.get("saptawara")
+            if s_val and str(s_val).strip().lower() == sap_clean:
+                m_sap = str(r.get("keterangan_saptawara", "-")).strip()
+                break
+        parts.append(f"Saptawara {n_sap}: {m_sap}")
+
+    return ". ".join(parts) + "." if parts else ""
 
 
-def parse_row(row, makna_rows):
+def parse_row(row, makna_rows, wuku_rows=None, ps_rows=None, aspects=None):
+    if wuku_rows is None:
+        wuku_rows = []
+    if ps_rows is None:
+        ps_rows = []
+
     pengelong = gv(row, "Pengelong")
     status_mala = gv(row, "Status_Mala")
     status_purnama = gv(row, "Status_Purnama")
@@ -290,11 +350,11 @@ def parse_row(row, makna_rows):
         "piodalan": gv(row, "piodalan"),
 
         "status_purnama": status_purnama,
-        "karakter_kelahiran": build_karakter_kelahiran(row, makna_rows),
+        "karakter_kelahiran": build_karakter_kelahiran(row, makna_rows, wuku_rows, ps_rows, aspects),
     }
 
 
-def generate_kalender_range(start_date, end_date):
+def generate_kalender_range(start_date, end_date, aspects=None):
     start = datetime.strptime(start_date, "%Y-%m-%d").date()
     end = datetime.strptime(end_date, "%Y-%m-%d").date()
 
@@ -304,33 +364,39 @@ def generate_kalender_range(start_date, end_date):
     with engine.connect() as conn:
         kalender_rows = get_kalender_rows_by_range(start, end, conn)
         makna_rows = get_makna_rows(conn)
+        wuku_rows = get_keterangan_wuku_rows(conn)
+        ps_rows = get_keterangan_pancawara_saptawara_rows(conn)
 
     hasil = []
 
     for row in kalender_rows:
-        hasil.append(parse_row(row, makna_rows))
+        hasil.append(parse_row(row, makna_rows, wuku_rows, ps_rows, aspects))
 
     hasil.sort(key=lambda item: (item["tahun"], item["bulan"], item["tanggal"]))
 
     return hasil
 
 
-def get_kalender_by_date(tanggal):
+def get_kalender_by_date(tanggal, aspects=None):
     target = datetime.strptime(tanggal, "%Y-%m-%d").date()
 
     with engine.connect() as conn:
         row = get_kalender_row_by_date(target, conn)
         makna_rows = get_makna_rows(conn)
+        wuku_rows = get_keterangan_wuku_rows(conn)
+        ps_rows = get_keterangan_pancawara_saptawara_rows(conn)
 
-    return parse_row(row, makna_rows) if row else None
+    return parse_row(row, makna_rows, wuku_rows, ps_rows, aspects) if row else None
 
 
-def get_kalender_by_month(tahun, bulan):
+def get_kalender_by_month(tahun, bulan, aspects=None):
     with engine.connect() as conn:
         kalender_rows = get_kalender_rows_by_month(tahun, bulan, conn)
         makna_rows = get_makna_rows(conn)
+        wuku_rows = get_keterangan_wuku_rows(conn)
+        ps_rows = get_keterangan_pancawara_saptawara_rows(conn)
 
-    hasil = [parse_row(row, makna_rows) for row in kalender_rows]
+    hasil = [parse_row(row, makna_rows, wuku_rows, ps_rows, aspects) for row in kalender_rows]
     hasil.sort(key=lambda item: item["tanggal"])
 
     return hasil

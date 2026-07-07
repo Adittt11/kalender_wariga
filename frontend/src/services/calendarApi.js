@@ -5,18 +5,21 @@ export async function getCalendarByMonth(year, month) {
   return response.data;
 }
 
-export async function getCalendarByDate(date) {
-  const response = await api.get(`/api/calendar/date/${date}`);
+export async function getCalendarByDate(date, aspects = "") {
+  const url = aspects ? `/api/calendar/date/${date}?aspects=${aspects}` : `/api/calendar/date/${date}`;
+  const response = await api.get(url);
   return response.data;
 }
 
-export async function generateCharacterAi(date) {
-  const response = await api.post(`/api/calendar/date/${date}/character-ai`);
+export async function generateCharacterAi(date, aspects = "") {
+  const url = aspects ? `/api/calendar/date/${date}/character-ai?aspects=${aspects}` : `/api/calendar/date/${date}/character-ai`;
+  const response = await api.post(url);
   return response.data;
 }
 
-export async function generatePrintAi(date) {
-  const response = await api.post(`/api/calendar/date/${date}/print-ai`);
+export async function generatePrintAi(date, aspects = "") {
+  const url = aspects ? `/api/calendar/date/${date}/print-ai?aspects=${aspects}` : `/api/calendar/date/${date}/print-ai`;
+  const response = await api.post(url);
   return response.data;
 }
 
