@@ -9,6 +9,7 @@ from app.routes.pertemuan_routes import router as pertemuan_router
 from app.routes.knowledge_routes import router as knowledge_router
 from app.routes.admin_auth_routes import router as admin_auth_router
 from app.routes.dewasa_ayu_routes import router as dewasa_ayu_router
+from app.routes.pebayuhan_routes import router as pebayuhan_router
 
 app = FastAPI(title="Kalender Bali Wariga API")
 
@@ -66,6 +67,13 @@ app.include_router(
     dewasa_ayu_router,
     prefix="/api/dewasa-ayu",
     tags=["Dewasa Ayu"]
+)
+
+
+app.include_router(
+    pebayuhan_router,
+    prefix="/api/pebayuhan",
+    tags=["Penglukatan"]
 )
 
 

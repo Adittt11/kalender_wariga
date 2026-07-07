@@ -20,7 +20,7 @@ const menus = [
   { label: "Dewasa Ayu", path: "/dewasa-ayu", icon: Sun },
   { label: "Pertemuan Lanang Istri", path: "/pertemuan-lanang-istri", icon: HeartHandshake },
   { label: "Cetak Kalender", path: "/cetak-kalender", icon: Printer },
-  { label: "Penglukatan", path: "/penglukatan", icon: Droplet },
+  { label: "Pebayuhan", path: "/penglukatan", icon: Droplet },
   { label: "Admin Knowledge", path: "/admin-knowledge", icon: UploadCloud }
 ];
 
@@ -30,16 +30,14 @@ export default function Sidebar({ open, onClose }) {
       {/* Overlay mobile */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-black/40 transition lg:hidden ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        className={`fixed inset-0 z-40 bg-black/40 transition lg:hidden ${open ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
       />
 
       {/* Sidebar */}
       <aside
-        className={`wariga-sidebar fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col overflow-hidden transition-transform duration-300 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`wariga-sidebar fixed left-0 top-0 z-50 flex h-screen w-[280px] flex-col overflow-hidden transition-transform duration-300 ${open ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Gambar Pura */}
         <div className="wariga-sidebar-scenery pointer-events-none absolute inset-x-0 bottom-0 z-0 overflow-hidden">
@@ -80,10 +78,9 @@ export default function Sidebar({ open, onClose }) {
                   if (window.innerWidth < 1024) onClose();
                 }}
                 className={({ isActive }) =>
-                  `wariga-sidebar-menu flex items-center gap-4 rounded-xl px-4 py-3.5 text-[14px] transition ${
-                    isActive
-                      ? "wariga-sidebar-menu-active font-semibold"
-                      : "hover:bg-white/10"
+                  `wariga-sidebar-menu flex items-center gap-4 rounded-xl px-4 py-3.5 text-[14px] transition ${isActive
+                    ? "wariga-sidebar-menu-active font-semibold"
+                    : "hover:bg-white/10"
                   }`
                 }
               >
