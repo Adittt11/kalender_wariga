@@ -6,7 +6,7 @@ PostgreSQL.
 ## Tabel Database
 
 - kalender_bali
-- tambahan
+- makna_4aspek
 
 ## Cara menjalankan
 

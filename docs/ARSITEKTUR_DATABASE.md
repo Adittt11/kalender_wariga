@@ -8,7 +8,7 @@ Backend mengakses database melalui SQLAlchemy pada file `backend/app/services/da
 Tabel yang digunakan aplikasi:
 
 - `kalender_dawuh`
-- `tambahan`
+- `makna_4aspek`
 
 Dua tabel tersebut dipakai untuk fitur:
 
@@ -24,13 +24,13 @@ Ringkasan penggunaan tabel per fitur:
 | Fitur | Tabel database yang dipakai |
 | --- | --- |
 | Dashboard | `kalender_dawuh` |
-| Kalender per tanggal | `kalender_dawuh` + `tambahan` |
-| Kalender per bulan | `kalender_dawuh` + `tambahan` |
-| Karakter kelahiran | `kalender_dawuh` + `tambahan` |
-| Generate kalender | `kalender_dawuh` + `tambahan` |
+| Kalender per tanggal | `kalender_dawuh` + `makna_4aspek` |
+| Kalender per bulan | `kalender_dawuh` + `makna_4aspek` |
+| Karakter kelahiran | `kalender_dawuh` + `makna_4aspek` |
+| Generate kalender | `kalender_dawuh` + `makna_4aspek` |
 | Tanya Wariga AI | `kalender_dawuh` |
 
-Catatan: karakter kelahiran dan generate kalender tetap memakai `kalender_dawuh` karena nama karakter harian tersimpan di tabel tersebut, sedangkan tabel `tambahan` dipakai untuk mengambil maknanya.
+Catatan: karakter kelahiran dan generate kalender tetap memakai `kalender_dawuh` karena nama karakter harian tersimpan di tabel tersebut, sedangkan tabel `makna_4aspek` dipakai untuk mengambil maknanya.
 
 ## 2. Diagram Database
 
@@ -67,7 +67,7 @@ erDiagram
         text Dawuh
     }
 
-    tambahan {
+    makna_4aspek {
         int id PK
         text Palalintangan
         text Makna_Palalintangan
@@ -79,10 +79,10 @@ erDiagram
         text Makna_PratitiSamutpada
     }
 
-    kalender_dawuh ||--o{ tambahan : "mencocokkan nama karakter"
+    kalender_dawuh ||--o{ makna_4aspek : "mencocokkan nama karakter"
 ```
 
-Catatan: relasi `kalender_dawuh` ke `tambahan` bukan foreign key fisik. Backend mencocokkan data berdasarkan isi teks kolom, misalnya nilai `Palalintangan` pada `kalender_dawuh` dicari maknanya di tabel `tambahan`.
+Catatan: relasi `kalender_dawuh` ke `makna_4aspek` bukan foreign key fisik. Backend mencocokkan data berdasarkan isi teks kolom, misalnya nilai `Palalintangan` pada `kalender_dawuh` dicari maknanya di tabel `makna_4aspek`.
 
 ## 3. Tabel `kalender_dawuh`
 
@@ -165,9 +165,9 @@ WHERE ("Tahun", "Bulan", "Tanggal")
 ORDER BY "Tahun", "Bulan", "Tanggal";
 ```
 
-## 4. Tabel `tambahan`
+## 4. Tabel `makna_4aspek`
 
-Tabel `tambahan` menyimpan makna dari data karakter kelahiran.
+Tabel `makna_4aspek` menyimpan makna dari data karakter kelahiran.
 
 Dipakai oleh:
 
@@ -199,10 +199,10 @@ Query utama yang dipakai backend:
 
 ```sql
 SELECT *
-FROM tambahan;
+FROM makna_4aspek;
 ```
 
-Backend mengambil semua baris dari `tambahan`, lalu mencocokkan nama karakter dengan data dari `kalender_dawuh`.
+Backend mengambil semua baris dari `makna_4aspek`, lalu mencocokkan nama karakter dengan data dari `kalender_dawuh`.
 
 ## 5. Alur Data Database
 
@@ -226,7 +226,7 @@ Frontend
   -> calendar_routes.py
   -> kalender_service.py
   -> kalender_dawuh
-  -> tambahan
+  -> makna_4aspek
 ```
 
 ### Kalender per Bulan
@@ -237,7 +237,7 @@ Frontend
   -> calendar_routes.py
   -> kalender_service.py
   -> kalender_dawuh
-  -> tambahan
+  -> makna_4aspek
 ```
 
 ### Karakter Kelahiran
@@ -246,11 +246,11 @@ Frontend
 Frontend
   -> GET /api/calendar/date/{tanggal}
   -> kalender_dawuh mengambil data Palalintangan, Pararasan, Ekajalarsi, PratitiSamutpada
-  -> tambahan mengambil makna karakter
+  -> makna_4aspek mengambil makna karakter
   -> backend membentuk karakter_kelahiran
 ```
 
-Tabel yang dipakai: `kalender_dawuh` dan `tambahan`.
+Tabel yang dipakai: `kalender_dawuh` dan `makna_4aspek`.
 
 ### Generate Kalender
 
@@ -260,11 +260,11 @@ Frontend
   -> generate_routes.py
   -> kalender_service.py
   -> kalender_dawuh mengambil data berdasarkan rentang tanggal
-  -> tambahan mengambil makna karakter
+  -> makna_4aspek mengambil makna karakter
   -> backend membentuk hasil kalender
 ```
 
-Tabel yang dipakai: `kalender_dawuh` dan `tambahan`.
+Tabel yang dipakai: `kalender_dawuh` dan `makna_4aspek`.
 
 ### Tanya Wariga AI
 
@@ -323,7 +323,7 @@ CREATE TABLE IF NOT EXISTS kalender_dawuh (
 CREATE INDEX IF NOT EXISTS idx_kalender_dawuh_tanggal
 ON kalender_dawuh ("Tahun", "Bulan", "Tanggal");
 
-CREATE TABLE IF NOT EXISTS tambahan (
+CREATE TABLE IF NOT EXISTS makna_4aspek (
     id BIGSERIAL PRIMARY KEY,
     "Palalintangan" TEXT,
     "Makna_Palalintangan" TEXT,
@@ -341,4 +341,4 @@ CREATE TABLE IF NOT EXISTS tambahan (
 | Tabel | Dipakai untuk |
 | --- | --- |
 | `kalender_dawuh` | Dashboard, kalender Bali, kalender per tanggal/bulan, generate kalender, Tanya Wariga AI, dawuh, pakakalan, baik-buruk hari, dan data nama karakter kelahiran. |
-| `tambahan` | Makna karakter kelahiran yang digabungkan dengan data dari `kalender_dawuh`. |
+| `makna_4aspek` | Makna karakter kelahiran yang digabungkan dengan data dari `kalender_dawuh`. |

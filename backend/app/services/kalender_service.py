@@ -78,7 +78,7 @@ def get_all_makna():
         result = conn.execute(
             text("""
                 SELECT *
-                FROM tambahan
+                FROM makna_4aspek
             """)
         )
 
@@ -158,7 +158,7 @@ def get_makna_rows(conn):
     result = conn.execute(
         text("""
             SELECT *
-            FROM tambahan
+            FROM makna_4aspek
         """)
     )
 

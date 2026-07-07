@@ -65,7 +65,7 @@ graph TD
     Date_Check -->|Ya / Siap Bangun Konteks| Context_Builder[build_chat_database_context]
     
     Context_Builder -->|A. Query Kalender Harian/Bulanan| Kalender_Service[kalender_service.py]
-    Kalender_Service -->|Query SQL| DB_Kalender[(Tabel: kalender_bali & tambahan)]
+    Kalender_Service -->|Query SQL| DB_Kalender[(Tabel: kalender_bali & makna_4aspek)]
     
     Context_Builder -->|B. Query Dewasa Ayu| Dewasa_Service[dewasa_ayu_service.py]
     Dewasa_Service -->|Query SQL| DB_Dewasa
@@ -108,15 +108,15 @@ Aplikasi chatbot secara terstruktur memetakan pertanyaan pengguna ke database re
 *   **Pertanyaan Pengguna**: *"Bagaimana detail kalender tanggal 22 Juni 2026?"*, *"Karakter kelahiran orang lahir besok"*, *"Pakakalan hari ini"*
 *   **Dataset & Tabel**:
     *   `kalender_bali`: Menyimpan data penanggalan Bali harian.
-    *   `tambahan`: Menyimpan teks deskripsi makna/arti penanggalan.
+    *   `makna_4aspek`: Menyimpan teks deskripsi makna/arti penanggalan.
 *   **Pemetaan Kolom**:
     *   *Kueri*: `Tahun`, `Bulan`, `Tanggal`.
     *   *Wewaran*: `Ekawara`, `Dwiwara`, `Triwara`, `Caturwara`, `Pancawara`, `Sadwara`, `Saptawara`, `Astawara`, `Sangawara`, `Dasawara`.
     *   *Elemen Kalender Bali*: `Wuku`, `Ingkel`, `Sasih`, `Penanggal`, `Pengelong`, `Status_Mala`, `Status_Purnama`, `Nyepi`, `piodalan`.
-    *   *Karakter Kelahiran*: `Palalintangan`, `Pararasan`, `PratitiSamutpada`, `Ekajalarsi`. Kolom ini dicocokkan ke tabel `tambahan` untuk mengambil kolom makna seperti `Makna_Palalintangan` dan `Makna_Ekajalarsi`.
+    *   *Karakter Kelahiran*: `Palalintangan`, `Pararasan`, `PratitiSamutpada`, `Ekajalarsi`. Kolom ini dicocokkan ke tabel `makna_4aspek` untuk mengambil kolom makna seperti `Makna_Palalintangan` dan `Makna_Ekajalarsi`.
 *   **Alur Kode**:
     1.  User mengirim pesan $\rightarrow$ backend mengekstraksi tanggal target (misal: `2026-06-22`) melalui fungsi `extract_latest_date`.
-    2.  Memanggil `get_kalender_by_date` di [kalender_service.py](file:///c:/Users/Ceditt/Documents/A-KULIAH/SEMESTER-6/DSP/kalender_bali/kalender_wariga/backend/app/services/kalender_service.py#L327) untuk mengambil data dari tabel `kalender_bali` dan `tambahan`.
+    2.  Memanggil `get_kalender_by_date` di [kalender_service.py](file:///c:/Users/Ceditt/Documents/A-KULIAH/SEMESTER-6/DSP/kalender_bali/kalender_wariga/backend/app/services/kalender_service.py#L327) untuk mengambil data dari tabel `kalender_bali` dan `makna_4aspek`.
     3.  Data mentah di-parse menggunakan fungsi `parse_row` untuk memformat data lunar, urip angka, dan menggabungkan teks penjelasan karakter kelahiran.
     4.  Hasil parsing dimasukkan sebagai format JSON ke dalam prompt LLM.
 

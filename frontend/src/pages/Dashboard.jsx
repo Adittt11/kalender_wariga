@@ -34,10 +34,22 @@ function hasValue(value) {
 }
 
 function normalizeEventText(value) {
-  return String(value || "")
-    .replace(/\[[^\]]+\]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  if (!value) {
+    return "";
+  }
+
+  const str = String(value);
+  const cleanStr = str.replace(/\[[^\]]+\]/g, "");
+
+  if (str.includes("\n")) {
+    return cleanStr
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join(" | ");
+  }
+
+  return cleanStr.replace(/\s+/g, " ").trim();
 }
 
 function collectMonthlyEvents(monthData, fields) {
