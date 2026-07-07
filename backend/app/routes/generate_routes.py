@@ -9,6 +9,7 @@ router = APIRouter()
 class GenerateRequest(BaseModel):
     start_date: str
     end_date: str
+    aspects: list[str] = None
 
 
 @router.post("/kalender")
@@ -16,7 +17,8 @@ def generate_kalender(payload: GenerateRequest):
     try:
         data = generate_kalender_range(
             payload.start_date,
-            payload.end_date
+            payload.end_date,
+            aspects=payload.aspects
         )
         return {
             "success": True,

@@ -23,18 +23,59 @@ export default function KarakterKelahiran() {
   const [loadingAi, setLoadingAi] = useState(false);
   const [aiCharacter, setAiCharacter] = useState("");
   const [error, setError] = useState("");
+  const [selectedAspects, setSelectedAspects] = useState({
+    palalintangan: true,
+    ekajalarsi: true,
+    pararasan: true,
+    pratiti_samutpada: true,
+    wuku: true,
+    pancawara: true,
+    saptawara: true,
+  });
+
+  const handleAspectChange = (aspect) => {
+    setSelectedAspects((prev) => {
+      const nextState = {
+        ...prev,
+        [aspect]: !prev[aspect],
+      };
+
+      const activeAspects = Object.keys(nextState).filter((key) => nextState[key]);
+      if (activeAspects.length === 0) {
+        setError("Pilih aspek terlebih dahulu.");
+        setResult(null);
+        setAiCharacter("");
+      } else {
+        setError((prevError) => 
+          prevError === "Pilih aspek terlebih dahulu." ? "" : prevError
+        );
+      }
+
+      return nextState;
+    });
+  };
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    const activeAspects = Object.keys(selectedAspects).filter((key) => selectedAspects[key]);
+    if (activeAspects.length === 0) {
+      setError("Pilih aspek terlebih dahulu.");
+      setResult(null);
+      setAiCharacter("");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setAiCharacter("");
+    const aspectsStr = activeAspects.join(",");
 
     try {
       setLoadingAi(true);
       const [calendarResponse, aiResponse] = await Promise.all([
-        getCalendarByDate(date),
-        generateCharacterAi(date),
+        getCalendarByDate(date, aspectsStr),
+        generateCharacterAi(date, aspectsStr),
       ]);
       setResult(calendarResponse.data);
       setAiCharacter(aiResponse.data.karakter_kelahiran_ai);
@@ -53,11 +94,14 @@ export default function KarakterKelahiran() {
 
   const characterSources = result
     ? [
-        ["Ekajalarsi", result.ekajalarsi],
-        ["Palalintangan", result.palalintangan],
-        ["Pararasan", result.pararasan],
-        ["Pratiti Samutpada", result.pratiti_samutpada],
-      ]
+        selectedAspects.ekajalarsi && ["Ekajalarsi", result.ekajalarsi],
+        selectedAspects.palalintangan && ["Palalintangan", result.palalintangan],
+        selectedAspects.pararasan && ["Pararasan", result.pararasan],
+        selectedAspects.pratiti_samutpada && ["Pratiti Samutpada", result.pratiti_samutpada],
+        selectedAspects.wuku && ["Wuku", result.wuku],
+        selectedAspects.pancawara && ["Pancawara", result.pancawara],
+        selectedAspects.saptawara && ["Saptawara", result.saptawara],
+      ].filter(Boolean)
     : [];
 
   return (
@@ -70,8 +114,7 @@ export default function KarakterKelahiran() {
             </div>
             <h1 className="mt-5 text-2xl font-bold sm:text-3xl">Karakter Kelahiran</h1>
             <p className="mt-3 text-sm leading-7 text-white/80 sm:text-base">
-              Pilih tanggal lahir untuk melihat karakter berdasarkan Ekajalarsi,
-              Palalintangan, Pararasan, dan Pratiti Samutpada.
+              Pilih tanggal lahir dan centang aspek di bawah untuk melihat karakter berdasarkan kalender Bali.
             </p>
           </div>
 
@@ -98,6 +141,52 @@ export default function KarakterKelahiran() {
               {loading ? "Memuat..." : "Lihat Karakter"}
             </button>
           </form>
+        </div>
+
+        <div className="mt-6 border-t border-white/10 pt-4 text-center">
+          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">Filter Aspek Karakter:</p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2 text-xs">
+            {Object.keys(selectedAspects).map((aspect) => (
+              <label 
+                key={aspect} 
+                className={`flex items-center gap-2.5 cursor-pointer select-none px-3.5 py-2 rounded-xl transition-all duration-200 border ${
+                  selectedAspects[aspect]
+                    ? "bg-white/15 border-white/20 text-white shadow-sm"
+                    : "bg-white/5 border-white/5 text-white/60 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedAspects[aspect]}
+                    onChange={() => handleAspectChange(aspect)}
+                    className="sr-only"
+                  />
+                  <div className={`w-4 h-4 rounded flex items-center justify-center transition-all duration-200 ${
+                    selectedAspects[aspect]
+                      ? "bg-white text-[#8A5838]"
+                      : "border border-white/35 bg-transparent text-transparent"
+                  }`}>
+                    <svg
+                      className="w-3.5 h-3.5 stroke-[3.5]"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <span className="capitalize font-medium tracking-wide">
+                  {aspect.replace("_", " ")}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
       </section>
 
