@@ -161,54 +161,270 @@ body {
 }
 
 .dashboard-calendar-card {
-  overflow: hidden;
+  overflow: visible;
   padding: 20px 24px 24px;
+  position: relative;
 }
 
 .dashboard-calendar-toolbar {
   align-items: center;
   display: flex;
-  gap: 14px;
+  gap: 10px;
   justify-content: center;
   margin-bottom: 14px;
+  min-height: 42px;
+  position: relative;
 }
 
-.dashboard-calendar-toolbar h2 {
+.dashboard-calendar-nav {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.cal-month-label {
+  align-items: center;
+  background: #fffaf4;
+  border: 1px solid #eadfd4;
+  border-radius: 10px;
   color: #47281a;
+  display: flex;
   font-size: 1rem;
   font-weight: 700;
-  min-width: 150px;
+  gap: 6px;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 170px;
+  padding: 6px 12px;
   text-align: center;
 }
 
-.dashboard-calendar-selectors {
+/* Clickable month+year label button */
+.cal-month-label-btn {
   align-items: center;
-  display: grid;
-  gap: 8px;
-  grid-template-columns: minmax(126px, 1fr) 86px;
-  min-width: 230px;
+  background: #fffaf4;
+  border: 1px solid #eadfd4;
+  border-radius: 10px;
+  color: #47281a;
+  cursor: pointer;
+  display: flex;
+  font-size: 1rem;
+  font-weight: 700;
+  gap: 6px;
+  min-width: 155px;
+  padding: 6px 12px;
+  text-align: center;
+  transition: 150ms ease;
 }
 
-.dashboard-calendar-selectors select {
+.cal-month-label-btn:hover {
+  border-color: #cda67c;
+  box-shadow: 0 0 0 3px rgba(205, 166, 124, 0.18);
+}
+
+/* Date-jump filter button – positioned at top-right of toolbar */
+.cal-date-filter-btn {
+  align-items: center;
+  background: #f3e2cd;
+  border: 1px solid #e0c9af;
+  border-radius: 8px;
+  color: #65371f;
+  cursor: pointer;
+  display: flex;
+  height: 36px;
+  justify-content: center;
+  position: absolute;
+  right: 0;
+  top: 2px;
+  transition: 150ms ease;
+  width: 36px;
+}
+
+.cal-date-filter-btn:hover {
+  background: #e8cdaf;
+  border-color: #cda67c;
+}
+
+/* ── Scroll Picker Panel ── */
+.cal-picker-panel {
+  align-items: center;
+  background: #fffdf9;
+  border: 1px solid #eadfd4;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(90, 50, 29, 0.12);
+  display: flex;
+  gap: 0;
+  left: 50%;
+  overflow: hidden;
+  position: absolute;
+  top: 52px;
+  transform: translateX(-50%);
+  z-index: 50;
+}
+
+.cal-scroll-picker-wrap {
+  flex: 1;
+  height: 180px;
+  overflow: hidden;
+  position: relative;
+}
+
+.cal-scroll-picker-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: scroll;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.cal-scroll-picker-list::-webkit-scrollbar {
+  display: none;
+}
+
+.cal-scroll-picker-item {
+  align-items: center;
+  color: #a18070;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+  height: 36px;
+  justify-content: center;
+  padding: 0 12px;
+  transition: 120ms ease;
+  white-space: nowrap;
+  z-index: 2;
+}
+
+.cal-scroll-picker-item:hover {
+  color: #6b391b;
+}
+
+.cal-scroll-picker-item-active {
+  color: #6b391b;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+/* Highlighted center rail */
+.cal-scroll-picker-rail {
+  background: rgba(107, 57, 27, 0.07);
+  border-bottom: 1px solid #e6d0ba;
+  border-top: 1px solid #e6d0ba;
+  height: 36px;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  top: calc(50% - 18px);
+  width: 100%;
+}
+
+.cal-picker-divider {
+  background: #eadfd4;
+  flex-shrink: 0;
+  height: 100%;
+  width: 1px;
+}
+
+.cal-picker-close {
+  background: #6b391b;
+  border-left: 1px solid #eadfd4;
+  color: #fffaf4;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  height: 100%;
+  padding: 0 14px;
+  transition: 150ms ease;
+  white-space: nowrap;
+}
+
+.cal-picker-close:hover {
+  background: #4d2a19;
+}
+
+/* ── Date Filter Popover ── */
+.cal-date-filter-panel {
+  background: #fffdf9;
+  border: 1px solid #eadfd4;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(90, 50, 29, 0.14);
+  padding: 14px 16px;
+  position: absolute;
+  right: 0;
+  top: 52px;
+  width: 220px;
+  z-index: 50;
+}
+
+.cal-date-filter-panel > p {
+  color: #5c3827;
+  font-size: 0.72rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.cal-date-input {
   appearance: none;
   background: #fffaf4;
   border: 1px solid #eadfd4;
   border-radius: 8px;
   color: #3b2117;
-  cursor: pointer;
-  font-size: 0.92rem;
-  font-weight: 800;
-  height: 40px;
+  font-size: 0.78rem;
+  height: 36px;
   outline: none;
-  padding: 0 28px 0 12px;
-  text-align: center;
+  padding: 0 10px;
+  transition: 150ms ease;
+  width: 100%;
+}
+
+.cal-date-input:focus {
+  border-color: #cda67c;
+  box-shadow: 0 0 0 3px rgba(205, 166, 124, 0.18);
+}
+
+.cal-date-filter-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.cal-filter-go-btn {
+  background: #6b391b;
+  border-radius: 7px;
+  color: #fffaf4;
+  cursor: pointer;
+  flex: 1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  height: 32px;
   transition: 150ms ease;
 }
 
-.dashboard-calendar-selectors select:focus,
-.dashboard-calendar-selectors select:hover {
+.cal-filter-go-btn:hover {
+  background: #4d2a19;
+}
+
+.cal-filter-cancel-btn {
+  background: transparent;
+  border: 1px solid #e0cfbf;
+  border-radius: 7px;
+  color: #7a5849;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 600;
+  height: 32px;
+  padding: 0 10px;
+  transition: 150ms ease;
+}
+
+.cal-filter-cancel-btn:hover {
   border-color: #cda67c;
-  box-shadow: 0 0 0 3px rgba(205, 166, 124, 0.18);
+  color: #4d2a19;
 }
 
 .dashboard-compact-calendar {
@@ -830,6 +1046,23 @@ body {
     gap: 8px;
   }
 
+  .dashboard-calendar-nav {
+    gap: 6px;
+    max-width: calc(100% - 44px);
+  }
+
+  .dashboard-calendar-nav .calendar-nav-button {
+    height: 34px;
+    width: 34px;
+  }
+
+  .cal-month-label {
+    font-size: 0.78rem;
+    min-height: 34px;
+    min-width: 108px;
+    padding: 5px 8px;
+  }
+
   .dashboard-calendar-selectors {
     gap: 6px;
     grid-template-columns: minmax(104px, 1fr) 72px;
@@ -1396,7 +1629,8 @@ body {
 }
 
 [data-theme="dark"] .dashboard-card-icon,
-[data-theme="dark"] .calendar-nav-button {
+[data-theme="dark"] .calendar-nav-button,
+[data-theme="dark"] .cal-month-label {
   background: #43352d;
   border-color: #6b574b;
   color: #f2c88c;

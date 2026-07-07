@@ -14,7 +14,6 @@ from app.services.openai_service import request_openai_embeddings
 KNOWLEDGE_CATEGORIES = (
     "Penglukatan",
     "Pembayuhan",
-    "Tenung",
     "Permata",
     "Lontar",
     "Wariga",

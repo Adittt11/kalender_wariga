@@ -15,6 +15,11 @@ const videoCanvasWidth = 1080;
 const videoFrameDuration = 3000;
 const videoTransitionDuration = 600;
 const videoFps = 24;
+const initialDownloadProgress = {
+  elapsedSeconds: 0,
+  message: "",
+  percent: 0,
+};
 
 function formatDate(date) {
   if (!date) {
@@ -26,6 +31,23 @@ function formatDate(date) {
     month: "long",
     year: "numeric",
   }).format(new Date(`${date}T00:00:00`));
+}
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return "0 detik";
+  }
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (!minutes) {
+    return `${remainingSeconds} detik`;
+  }
+
+  return remainingSeconds
+    ? `${minutes} menit ${remainingSeconds} detik`
+    : `${minutes} menit`;
 }
 
 function splitValues(value, separator) {
@@ -204,12 +226,50 @@ export default function CetakKalender() {
   const [downloadingPng, setDownloadingPng] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingVideo, setDownloadingVideo] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(initialDownloadProgress);
   const [loadingAi, setLoadingAi] = useState(false);
   const [error, setError] = useState("");
   const calendarRef = useRef(null);
   const aiCacheRef = useRef({});
+  const downloadProgressTimerRef = useRef(null);
 
   const preview = calendarData[activeIndex];
+  const selectedDateCount = calendarData.length || 0;
+  const videoDurationSeconds = selectedDateCount * (videoFrameDuration / 1000);
+
+  function updateDownloadProgress(nextProgress) {
+    setDownloadProgress((current) => ({
+      ...current,
+      ...nextProgress,
+      percent: Math.max(0, Math.min(100, Math.round(nextProgress.percent ?? current.percent))),
+    }));
+  }
+
+  function startDownloadProgress(message) {
+    if (downloadProgressTimerRef.current) {
+      clearInterval(downloadProgressTimerRef.current);
+    }
+
+    const startedAt = Date.now();
+    setDownloadProgress({
+      elapsedSeconds: 0,
+      message,
+      percent: 0,
+    });
+    downloadProgressTimerRef.current = setInterval(() => {
+      setDownloadProgress((current) => ({
+        ...current,
+        elapsedSeconds: Math.floor((Date.now() - startedAt) / 1000),
+      }));
+    }, 1000);
+  }
+
+  function stopDownloadProgress() {
+    if (downloadProgressTimerRef.current) {
+      clearInterval(downloadProgressTimerRef.current);
+      downloadProgressTimerRef.current = null;
+    }
+  }
 
   useEffect(() => {
     if (!preview || preview.ai_ready) {
@@ -278,6 +338,8 @@ export default function CetakKalender() {
       cancelled = true;
     };
   }, [preview]);
+
+  useEffect(() => () => stopDownloadProgress(), []);
 
   async function handleGenerate(event) {
     event.preventDefault();
@@ -368,19 +430,33 @@ export default function CetakKalender() {
     }
   }
 
-  async function enrichCalendarRange() {
+  async function enrichCalendarRange(onProgress) {
     const enrichedCalendars = [];
+    const totalItems = Math.max(1, calendarData.length);
 
-    for (const item of calendarData) {
+    for (const [index, item] of calendarData.entries()) {
+      onProgress?.({
+        message: `Menyiapkan data tanggal ${index + 1}/${totalItems}`,
+        percent: (index / totalItems) * 25,
+      });
+
       const cachedItem = aiCacheRef.current[item.tanggal_lengkap];
 
       if (cachedItem) {
         enrichedCalendars.push(cachedItem);
+        onProgress?.({
+          message: `Data tanggal ${index + 1}/${totalItems} siap`,
+          percent: ((index + 1) / totalItems) * 25,
+        });
         continue;
       }
 
       if (item.ai_ready) {
         enrichedCalendars.push(item);
+        onProgress?.({
+          message: `Data tanggal ${index + 1}/${totalItems} siap`,
+          percent: ((index + 1) / totalItems) * 25,
+        });
         continue;
       }
 
@@ -399,23 +475,37 @@ export default function CetakKalender() {
 
       aiCacheRef.current[item.tanggal_lengkap] = enrichedItem;
       enrichedCalendars.push(enrichedItem);
+      onProgress?.({
+        message: `Data tanggal ${index + 1}/${totalItems} siap`,
+        percent: ((index + 1) / totalItems) * 25,
+      });
     }
 
     setCalendarData(enrichedCalendars);
     return enrichedCalendars;
   }
 
-  async function renderCalendarRange() {
-    const enrichedCalendars = await enrichCalendarRange();
+  async function renderCalendarRange(onProgress, progressStart = 0, progressEnd = 60) {
+    const enrichedCalendars = await enrichCalendarRange((progress) => {
+      onProgress?.({
+        ...progress,
+        percent: progressStart + (progress.percent / 100) * (progressEnd - progressStart),
+      });
+    });
     const images = [];
+    const totalItems = Math.max(1, enrichedCalendars.length);
 
-    for (const item of enrichedCalendars) {
+    for (const [index, item] of enrichedCalendars.entries()) {
       const host = document.createElement("div");
       let calendarElement = null;
       const root = createRoot(host);
 
       host.className = "print-calendar-export-host";
       document.body.appendChild(host);
+      onProgress?.({
+        message: `Merender tanggal ${index + 1}/${totalItems}`,
+        percent: progressStart + 25 + (index / totalItems) * (progressEnd - progressStart - 25),
+      });
 
       try {
         flushSync(() => {
@@ -436,6 +526,10 @@ export default function CetakKalender() {
         }
 
         images.push(await renderCalendarImage(calendarElement));
+        onProgress?.({
+          message: `Tanggal ${index + 1}/${totalItems} selesai dirender`,
+          percent: progressStart + 25 + ((index + 1) / totalItems) * (progressEnd - progressStart - 25),
+        });
       } finally {
         root.unmount();
         host.remove();
@@ -473,14 +567,24 @@ export default function CetakKalender() {
     ].find((type) => MediaRecorder.isTypeSupported(type));
   }
 
-  async function createCalendarVideo(dataUrls) {
+  async function createCalendarVideo(dataUrls, onProgress) {
     const mimeType = getSupportedVideoType();
 
     if (!mimeType) {
       throw new Error("Browser ini belum mendukung pembuatan video kalender.");
     }
 
-    const images = await Promise.all(dataUrls.map(loadImageFromDataUrl));
+    onProgress?.({ message: "Memuat gambar kalender untuk video", percent: 58 });
+    const images = await Promise.all(
+      dataUrls.map(async (dataUrl, index) => {
+        const image = await loadImageFromDataUrl(dataUrl);
+        onProgress?.({
+          message: `Memuat frame video ${index + 1}/${dataUrls.length}`,
+          percent: 58 + ((index + 1) / Math.max(1, dataUrls.length)) * 7,
+        });
+        return image;
+      })
+    );
 
     if (!images.length) {
       throw new Error("Tidak ada frame kalender yang bisa dibuat menjadi video.");
@@ -587,6 +691,10 @@ export default function CetakKalender() {
         lastDrawAt = now;
         const elapsed = now - timelineStartedAt;
         drawTimelineFrame(elapsed);
+        onProgress?.({
+          message: `Membuat video ${images.length} tanggal, ${videoFrameDuration / 1000} detik per tanggal`,
+          percent: 65 + (Math.min(elapsed, totalDuration) / totalDuration) * 30,
+        });
 
         if (elapsed >= totalDuration) {
           drawImage(images[images.length - 1]);
@@ -601,12 +709,14 @@ export default function CetakKalender() {
     });
 
     recorder.stop();
+    onProgress?.({ message: "Menyelesaikan file video", percent: 96 });
     await stopped;
     stream.getTracks().forEach((track) => track.stop());
 
     const videoBlob = new Blob(chunks, { type: mimeType });
 
     if (mimeType.includes("webm")) {
+      onProgress?.({ message: "Merapikan durasi video", percent: 98 });
       return fixWebmDuration(
         videoBlob,
         totalDuration,
@@ -633,19 +743,23 @@ export default function CetakKalender() {
     }
 
     setDownloadingPng(true);
+    startDownloadProgress("Menyiapkan PNG");
     setError("");
 
     try {
-      const dataUrls = await renderCalendarRange();
+      const dataUrls = await renderCalendarRange(updateDownloadProgress, 0, 90);
+      updateDownloadProgress({ message: "Mengunduh file PNG", percent: 95 });
       dataUrls.forEach((dataUrl, index) => {
         const link = document.createElement("a");
         link.download = `kalender-wariga-${calendarData[index].tanggal_lengkap}.png`;
         link.href = dataUrl;
         link.click();
       });
+      updateDownloadProgress({ message: "Download PNG selesai", percent: 100 });
     } catch (err) {
       setError(err.message || "Gambar kalender gagal diunduh.");
     } finally {
+      stopDownloadProgress();
       setDownloadingPng(false);
     }
   }
@@ -656,11 +770,13 @@ export default function CetakKalender() {
     }
 
     setDownloadingPdf(true);
+    startDownloadProgress("Menyiapkan PDF");
     setError("");
 
     try {
+      updateDownloadProgress({ message: "Memuat modul PDF", percent: 5 });
       const { jsPDF } = await import("jspdf");
-      const dataUrls = await renderCalendarRange();
+      const dataUrls = await renderCalendarRange(updateDownloadProgress, 5, 80);
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -672,6 +788,10 @@ export default function CetakKalender() {
       const availableWidth = pageWidth - margin * 2;
       const availableHeight = pageHeight - margin * 2;
       for (const [index, dataUrl] of dataUrls.entries()) {
+        updateDownloadProgress({
+          message: `Menyusun halaman PDF ${index + 1}/${dataUrls.length}`,
+          percent: 80 + (index / Math.max(1, dataUrls.length)) * 15,
+        });
         const image = await loadImageFromDataUrl(dataUrl);
 
         if (index > 0) {
@@ -693,12 +813,19 @@ export default function CetakKalender() {
           imageWidth,
           imageHeight
         );
+        updateDownloadProgress({
+          message: `Halaman PDF ${index + 1}/${dataUrls.length} selesai`,
+          percent: 80 + ((index + 1) / Math.max(1, dataUrls.length)) * 15,
+        });
       }
 
+      updateDownloadProgress({ message: "Mengunduh file PDF", percent: 98 });
       pdf.save(getExportFileName("pdf"));
+      updateDownloadProgress({ message: "Download PDF selesai", percent: 100 });
     } catch (err) {
       setError(err.message || "PDF kalender gagal diunduh.");
     } finally {
+      stopDownloadProgress();
       setDownloadingPdf(false);
     }
   }
@@ -709,17 +836,21 @@ export default function CetakKalender() {
     }
 
     setDownloadingVideo(true);
+    startDownloadProgress("Menyiapkan video");
     setError("");
 
     try {
-      const dataUrls = await renderCalendarRange();
-      const video = await createCalendarVideo(dataUrls);
+      const dataUrls = await renderCalendarRange(updateDownloadProgress, 0, 55);
+      const video = await createCalendarVideo(dataUrls, updateDownloadProgress);
       const extension = video.type.includes("mp4") ? "mp4" : "webm";
 
+      updateDownloadProgress({ message: "Mengunduh file video", percent: 99 });
       downloadBlob(video, getExportFileName(extension));
+      updateDownloadProgress({ message: "Download video selesai", percent: 100 });
     } catch (err) {
       setError(err.message || "Video kalender gagal diunduh.");
     } finally {
+      stopDownloadProgress();
       setDownloadingVideo(false);
     }
   }
@@ -842,6 +973,7 @@ export default function CetakKalender() {
                 type="PDF"
                 description="Unduh seluruh rentang tanggal, satu halaman untuk setiap hari."
                 loading={downloadingPdf}
+                progress={downloadProgress}
                 disabled={!preview || loadingAi || !preview.ai_ready}
                 onDownload={downloadPdf}
               />
@@ -850,13 +982,19 @@ export default function CetakKalender() {
                 description="Unduh setiap tanggal sebagai file PNG terpisah."
                 disabled={!preview || loadingAi || !preview.ai_ready}
                 loading={downloadingPng}
+                progress={downloadProgress}
                 onDownload={downloadPng}
               />
               <DownloadCard
                 type="VIDEO"
-                description="Unduh rentang tanggal sebagai video slideshow kalender."
+                description={
+                  selectedDateCount
+                    ? `Unduh rentang tanggal sebagai video slideshow kalender, ${videoFrameDuration / 1000} detik per tanggal. Total durasi video ${formatDuration(videoDurationSeconds)}.`
+                    : `Unduh rentang tanggal sebagai video slideshow kalender, ${videoFrameDuration / 1000} detik per tanggal.`
+                }
                 disabled={!preview || loadingAi || !preview.ai_ready}
                 loading={downloadingVideo}
+                progress={downloadProgress}
                 onDownload={downloadVideo}
               />
             </div>

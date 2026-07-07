@@ -1,16 +1,14 @@
-import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Moon, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarSearch, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Moon } from "lucide-react";
 import { getDashboardCalendarByMonth } from "../services/calendarApi";
 
 const dayNames = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
 const initialDate = new Date(1900, 0, 1);
 
-function getMonthLabel(year, month) {
-  return new Intl.DateTimeFormat("id-ID", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(year, month - 1, 1));
-}
+const MONTHS_ID = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
 
 function getMonthCells(year, month, monthData) {
   const firstDay = (new Date(year, month - 1, 1).getDay() + 6) % 7;
@@ -48,6 +46,9 @@ export default function CalendarCard({ onMonthDataChange, onSelectDate, selected
   const [monthData, setMonthData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [dateFilterOpen, setDateFilterOpen] = useState(false);
+  const [jumpDate, setJumpDate] = useState("");
+  const dateInputRef = useRef(null);
 
   useEffect(() => {
     async function loadMonth() {
@@ -64,8 +65,8 @@ export default function CalendarCard({ onMonthDataChange, onSelectDate, selected
         onMonthDataChange?.([], { year, month });
         setError(
           err.response?.data?.detail ||
-            err.message ||
-            "Tidak dapat memuat kalender Dawuh dari backend."
+          err.message ||
+          "Tidak dapat memuat kalender Dawuh dari backend."
         );
       } finally {
         setLoading(false);
@@ -81,19 +82,106 @@ export default function CalendarCard({ onMonthDataChange, onSelectDate, selected
     setMonth(nextDate.getMonth() + 1);
   }
 
+  function moveYear(offset) {
+    setYear((currentYear) => currentYear + offset);
+  }
+
+  function applyJumpDate(value) {
+    if (!value) return;
+    const d = new Date(value + "T00:00:00");
+    if (isNaN(d)) return;
+    setYear(d.getFullYear());
+    setMonth(d.getMonth() + 1);
+    onSelectDate?.(value);
+    setDateFilterOpen(false);
+    setJumpDate(value);
+  }
+
   const cells = getMonthCells(year, month, monthData);
+  const monthIndex = month - 1;
 
   return (
-    <section className="card dashboard-calendar-card">
+    <section className="card dashboard-calendar-card" style={{ position: "relative" }}>
       <div className="dashboard-calendar-toolbar">
-        <button className="calendar-nav-button" type="button" onClick={() => moveMonth(-1)}>
-          <ChevronLeft size={18} />
-        </button>
-        <h2 className="capitalize">{getMonthLabel(year, month)}</h2>
-        <button className="calendar-nav-button" type="button" onClick={() => moveMonth(1)}>
-          <ChevronRight size={18} />
+        <div className="dashboard-calendar-nav" aria-label="Navigasi bulan dan tahun">
+          <button
+            className="calendar-nav-button calendar-year-nav-button"
+            type="button"
+            title="Tahun sebelumnya"
+            onClick={() => moveYear(-1)}
+          >
+            <ChevronsLeft size={18} />
+          </button>
+          <button
+            className="calendar-nav-button"
+            type="button"
+            title="Bulan sebelumnya"
+            onClick={() => moveMonth(-1)}
+          >
+            <ChevronLeft size={18} />
+          </button>
+
+          <div className="cal-month-label" aria-live="polite">
+            <span>{MONTHS_ID[monthIndex]}</span>
+            <span>{year}</span>
+          </div>
+
+          <button
+            className="calendar-nav-button"
+            type="button"
+            title="Bulan berikutnya"
+            onClick={() => moveMonth(1)}
+          >
+            <ChevronRight size={18} />
+          </button>
+          <button
+            className="calendar-nav-button calendar-year-nav-button"
+            type="button"
+            title="Tahun berikutnya"
+            onClick={() => moveYear(1)}
+          >
+            <ChevronsRight size={18} />
+          </button>
+        </div>
+
+        <button
+          className="cal-date-filter-btn"
+          type="button"
+          title="Pilih tanggal tertentu"
+          onClick={() => setDateFilterOpen((open) => !open)}
+        >
+          <CalendarSearch size={16} />
         </button>
       </div>
+
+      {dateFilterOpen && (
+        <div className="cal-date-filter-panel">
+          <p>Lompat ke tanggal:</p>
+          <input
+            ref={dateInputRef}
+            type="date"
+            className="cal-date-input"
+            value={jumpDate}
+            onChange={(e) => setJumpDate(e.target.value)}
+          />
+          <div className="cal-date-filter-actions">
+            <button
+              className="cal-filter-go-btn"
+              type="button"
+              onClick={() => applyJumpDate(jumpDate)}
+            >
+              Tampilkan
+            </button>
+            <button
+              className="cal-filter-cancel-btn"
+              type="button"
+              onClick={() => setDateFilterOpen(false)}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="py-16 text-center text-sm text-gray-500">Memuat kalender...</div>
@@ -123,7 +211,6 @@ export default function CalendarCard({ onMonthDataChange, onSelectDate, selected
 
       {!loading && !error && !monthData.length && (
         <div className="m-4 flex items-center gap-3 rounded-2xl bg-baliSoft p-4 text-sm text-baliBrown">
-          <Search size={18} />
           Data bulan ini belum tersedia di tabel kalender_bali.
         </div>
       )}
