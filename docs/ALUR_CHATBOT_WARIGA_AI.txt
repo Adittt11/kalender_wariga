@@ -1,0 +1,166 @@
+================================================================================
+ALUR DATA DAN ARSITEKTUR DETEKSI PERTANYAAN CHATBOT TANYA WARIGA AI
+================================================================================
+
+Dokumen ini menjelaskan alur perjalanan data dari saat pengguna mengirimkan 
+pertanyaan (prompt) hingga chatbot memberikan jawaban, serta penjelasan detail 
+bagaimana sistem mendeteksi dan menangani setiap jenis pertanyaan.
+
+--------------------------------------------------------------------------------
+BAGIAN 1: ALUR UMUM PERJALANAN PROMPT (DATA FLOW)
+--------------------------------------------------------------------------------
+
+1. KIRIM PROMPT (Frontend):
+   Pengguna mengetik pertanyaan di antarmuka obrolan React (ChatWariga.jsx). 
+   Frontend memotong riwayat obrolan maksimal hanya 20 pesan terakhir (agar 
+   tidak melebihi kapasitas) dan mengirimkannya ke endpoint API "/api/chat".
+
+2. DETEKSI INTENT/NIAT (Backend - intent_service.py):
+   Backend FastAPI menerima payload pesan. Sebelum memproses lebih jauh, sistem 
+   menggunakan "Intent Service" (menggunakan LLM ringan atau aturan Regex lokal) 
+   untuk menerjemahkan pesan bebas pengguna menjadi format JSON terstruktur.
+   Contoh hasil klasifikasi:
+   {
+     "intent": "dewasa_ayu",
+     "date": "1900-01-01",
+     "ceremony": "Pawiwahan",
+     "confidence": 0.95
+    }
+
+3. FILTRASI & ROUTING KHUSUS (Bypass LLM Utama):
+   Backend memeriksa hasil intent:
+   a. Jika merupakan pencarian Dewasa Ayu spesifik (seperti mencari hari baik/buruk
+      upacara di bulan tertentu), sistem akan langsung menarik data dari database
+      tabel "dewasa" dan langsung merangkai jawabannya. Ini menghemat token API
+      dan menjamin data 100% akurat dari database lokal.
+   b. Jika pertanyaan terdeteksi tidak relevan dengan adat Bali atau Wariga, 
+      sistem langsung mengembalikan pesan penolakan yang santun tanpa memanggil LLM.
+
+4. PENGUMPULAN DATA KONTEKS / RAG (Retrieval-Augmented Generation):
+   Jika pertanyaan memerlukan kecerdasan LLM, backend akan mencari dan mengumpulkan
+   konteks data dari PostgreSQL untuk tanggal yang diminta:
+   - Data harian (wuku, wewaran, sasih, ingkel, piodalan) dari tabel "kalender_bali".
+   - Makna watak kelahiran dari tabel "makna_4aspek".
+   - Artikel adat pendukung (PDF/Excel yang diunggah) dari tabel "knowledge_chunks"
+     menggunakan pencarian berbasis kemiripan teks (Semantic Search via Embeddings).
+
+5. PEMANGGILAN LLM UTAMA (Groq / OpenAI):
+   Backend menyatukan aturan kepribadian asisten (System Prompt), data konteks 
+   yang didapat dari database, dan riwayat obrolan terakhir. Request dikirim ke
+   API Groq atau OpenAI untuk digenerasikan jawabannya.
+
+6. PEMBERSIHAN & PENGIRIMAN BALASAN (Frontend):
+   Teks jawaban dari LLM dibersihkan dari format huruf tebal markdown (seperti **)
+   dan dikirim kembali ke React untuk ditampilkan secara rapi di layar pengguna.
+
+--------------------------------------------------------------------------------
+BAGIAN 2: PENANGANAN SKENARIO PERTANYAAN (SCENARIO HANDLING)
+--------------------------------------------------------------------------------
+
+Berikut adalah cara sistem mendeteksi dan menangani setiap jenis pertanyaan:
+
+================================================================================
+SKENARIO A: Pencarian Dewasa Ayu Bulanan / Kustom
+Contoh Prompt: "Cari hari buruk pawiwahan bulan januari tahun 1900"
+================================================================================
+- DETEKSI: 
+  * Intent Service mendeteksi intent = "dewasa_ayu".
+  * Mengekstrak upacara = "Pawiwahan", bulan = 1 (Januari), tahun = 1900.
+  * Mendeteksi kata kunci kelayakan kelompok = "ala" (buruk) saja.
+- PENANGANAN:
+  * Backend memanggil service "dewasa_ayu_service.py" untuk mencari data di tabel
+    "dewasa" berdasarkan prefix bulan dan tahun ("1900-01-%").
+  * Sistem mengambil aturan pencocokan upacara Pawiwahan yang menghasilkan daftar
+    hari baik (Ayu), netral (Ala-Ayu), dan buruk (Ala).
+  * Karena user hanya meminta "hari buruk", sistem menyaring dan hanya merangkai
+    kelompok "Dewasa Ala / buruk" menjadi teks laporan terstruktur.
+  * Jawaban dikirim langsung ke user (Bypass LLM utama).
+
+================================================================================
+SKENARIO B: Pertanyaan di Luar Topik (Out-of-Scope)
+Contoh Prompt: "Bagaimana cara membuat rendang sapi?"
+================================================================================
+- DETEKSI:
+  * Intent Service mengelompokkannya sebagai intent = "tidak_relevan".
+  * Sistem mengecek apakah ada kata kunci kalender/wariga. Hasilnya = False.
+- PENANGANAN:
+  * Sistem langsung memotong aliran proses dan mengembalikan teks penolakan:
+    "Matur suksma. Sebagai asisten Tanya Wariga AI, saya hanya dapat membantu 
+     menjawab pertanyaan seputar Kalender Bali dan Wariga. Ada yang bisa saya bantu 
+     seputar topik ini?" (Bypass LLM utama).
+
+================================================================================
+SKENARIO C: Penjelasan Karakter Kelahiran / Weton
+Contoh Prompt: "Saya lahir 22 Juni 2026, bagaimana watak saya?"
+================================================================================
+- DETEKSI:
+  * Intent Service mengidentifikasi intent = "karakter_kelahiran".
+  * Mengekstrak tanggal = "2026-06-22".
+- PENANGANAN:
+  * Backend menarik data tanggal 22 Juni 2026 dari tabel "kalender_bali" untuk
+    mengetahui wuku, pancawara, saptawara, lintang, pararasan, dan ekajalarsinya.
+  * Backend mencocokkan nama-nama aspek tersebut ke tabel "makna_4aspek" untuk
+    mengambil penjelasan maknanya.
+  * Data watak mentah digabungkan ke dalam System Prompt LLM.
+  * LLM utama (OpenAI/Groq) membaca watak mentah tersebut dan menuliskan narasi
+    sifat lahir pengguna secara mengalir, sopan, dan mudah dipahami.
+
+================================================================================
+SKENARIO D: Pencarian Hari Raya Bulanan
+Contoh Prompt: "Daftar rahinan suci pada bulan Juni tahun 2026"
+================================================================================
+- DETEKSI:
+  * Intent Service mengidentifikasi intent = "hari_raya_bulanan".
+  * Mengekstrak periode bulan = 6 (Juni) dan tahun = 2026.
+- PENANGANAN:
+  * Backend menarik seluruh baris kalender untuk bulan Juni 2026 di tabel "kalender_bali".
+  * Sistem menyaring tanggal-tanggal yang memiliki kolom hari raya keagamaan, piodalan pura,
+    Kajeng Kliwon, atau Nyepi yang tidak kosong ("-").
+  * Kumpulan hari suci tersebut dikirim ke LLM sebagai konteks.
+  * LLM merangkum daftar tersebut menjadi list rapi berurutan tanggal tanpa 
+    mengurangi atau menambahkan tanggal palsu.
+
+================================================================================
+SKENARIO E: Kecocokan Jodoh (Pertemuan Lanang Istri)
+Contoh Prompt: "Kecocokan lahir tanggal 01-01-1990 dan 15-05-1992"
+================================================================================
+- DETEKSI:
+  * Intent Service mengidentifikasi intent = "pertemuan_lanang_istri".
+  * Mengekstrak date_lanang = "1990-01-01" dan date_istri = "1992-05-15".
+- PENANGANAN:
+  * Backend menarik data kalender untuk kedua tanggal tersebut dari database.
+  * Sistem menghitung Urip/Neptu dari Pancawara dan Saptawara masing-masing orang,
+    lalu menjumlahkannya untuk dihitung menggunakan rumus pertemuan perjodohan Bali.
+  * Hasil perhitungan numerik dan makna kecocokannya dikirim sebagai konteks ke LLM.
+  * LLM menjelaskan potensi keharmonisan pasangan tersebut berdasarkan hasil hitungan
+    secara bijak dan memberikan saran-saran positif.
+
+================================================================================
+SKENARIO F: Pengetahuan Adat Umum (Knowledge Base / RAG)
+Contoh Prompt: "Apa saja sarana yang digunakan untuk upacara penglukatan?"
+================================================================================
+- DETEKSI:
+  * Intent Service mengidentifikasi intent = "penglukatan" atau "knowledge_umum".
+- PENANGANAN:
+  * Pertanyaan dikonversi menjadi representasi vektor numerik (Embedding).
+  * Backend mencocokkan vektor tersebut dengan data dokumen adat yang tersimpan di
+    tabel "knowledge_chunks" (Semantic Search).
+  * Potongan teks dokumen paling relevan (misal tata cara Penglukatan) diambil.
+  * Teks dokumen diserahkan ke LLM sebagai referensi utama.
+  * LLM menjawab pertanyaan pengguna secara akurat sesuai isi dokumen yang diunggah.
+
+================================================================================
+SKENARIO G: Pertanyaan Lanjutan / Singkat (Follow-Up)
+Contoh Prompt: "Tolong persingkat penjelasan di atas"
+================================================================================
+- DETEKSI:
+  * Intent Service mengelompokkannya sebagai intent = "tidak_relevan".
+  * Namun, sistem mendeteksi kalimat tersebut merupakan follow-up dari kata kunci
+    perintah (seperti "singkat", "detail", "panjang", "simpulkan").
+- PENANGANAN:
+  * Backend memindai riwayat chat sebelumnya untuk mencari pesan pengguna terakhir
+    yang memiliki intent valid (misal: "karakter_kelahiran").
+  * Intent lama tersebut diduplikasi untuk sesi ini, lalu instruksi modifikasinya
+    (misal: meringkas) diserahkan ke LLM.
+  * LLM memperbarui jawabannya sesuai instruksi follow-up pengguna.
+================================================================================

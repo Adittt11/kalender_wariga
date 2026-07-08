@@ -1,0 +1,111 @@
+================================================================================
+LOGIKA PEMILIHAN TABEL DAN SEMANTIC SEARCH DI BACKEND TANYA WARIGA AI
+================================================================================
+
+Dokumen ini menjelaskan bagaimana sistem backend memilah dan mengarahkan kueri 
+ke masing-masing tabel (tabel tunggal, gabungan 2 tabel, atau pencarian semantik) 
+lengkap dengan nama file dan baris kodenya.
+
+--------------------------------------------------------------------------------
+BAGIAN 1: LOKASI FILE UTAMA
+--------------------------------------------------------------------------------
+
+1. chat_routes.py (backend/app/routes/chat_routes.py)
+   Pintu masuk pertama API chat. Berfungsi melakukan filtrasi bypass (seperti
+   pencarian Dewasa Ayu langsung dan Out-of-Scope) sebelum memicu RAG.
+
+2. chat_context_service.py (backend/app/services/chat_context_service.py)
+   Pusat perakitan RAG. Berisi fungsi "build_chat_database_context()" yang bertugas 
+   memilah dan menyusun data apa saja yang perlu ditarik dari database PostgreSQL.
+
+3. intent_service.py (backend/app/services/intent_service.py)
+   Layanan klasifikasi maksud (intent) pertanyaan menggunakan LLM Mini/Regex 
+   yang menghasilkan variabel "intent_name" (misalnya: "karakter_kelahiran",
+   "dewasa_ayu", "penglukatan").
+
+--------------------------------------------------------------------------------
+BAGIAN 2: ALUR PEMILIHAN TABEL (TABLE ROUTING LOGIC)
+--------------------------------------------------------------------------------
+
+Sistem membagi kueri data ke dalam 4 rute pengambilan berdasarkan "intent_name" 
+dan keberadaan "tanggal" yang dideteksi pada prompt pengguna:
+
+================================================================================
+RUTE 1: HANYA MENGAMBIL 1 TABEL EMBEDDING (Semantic Search)
+================================================================================
+* Kategori Pertanyaan:
+  Teori adat, filosofi ritual, lontar, permata, atau penglukatan umum tanpa tanggal.
+* Baris Kode Pemicu:
+  - File: chat_context_service.py (Baris 1179-1186)
+  - Kode:
+    if intent_name in ("penglukatan", "knowledge_umum"):
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            "KONTEKS KNOWLEDGE UPLOAD:\n"
+            f"{knowledge_context}"
+        )
+* Cara Kerja Kueri:
+  Sistem melihat intent_name bernilai "penglukatan" atau "knowledge_umum" dan tidak 
+  ada input tanggal. Backend mengabaikan tabel kalender dan hanya memicu variabel 
+  "knowledge_context" yang menjalankan fungsi "safe_build_knowledge_context()".
+  Fungsi ini melakukan pencarian vektor (embedding) ke HANYA 1 tabel di database:
+  - Tabel: "knowledge_chunks" (tempat menyimpan file Excel/PDF/Text yang diupload admin).
+
+================================================================================
+RUTE 2: HANYA MENGAMBIL 1 TABEL TERSTRUKTUR (Direct DB Bypass - Tanpa AI/Embedding)
+================================================================================
+* Kategori Pertanyaan:
+  Pencarian Dewasa Ayu bulanan/tahun secara langsung (nama upacara + bulan + tahun).
+* Baris Kode Pemicu:
+  - File: chat_routes.py (Baris 60-73 dan pengecekan di dalam chat())
+  - Kode:
+    dewasa_answer = build_dewasa_direct_answer(latest_user_message)
+    if dewasa_answer:
+        return {"success": True, "data": {"answer": dewasa_answer}}
+* Cara Kerja Kueri:
+  Sebelum memicu AI atau pencarian vektor, route utama memeriksa apakah format 
+  pertanyaan memenuhi pencarian dewasa langsung. Jika ya, backend melakukan kueri 
+  SQL terstruktur menggunakan "SELECT" ke HANYA 1 tabel di database:
+  - Tabel: "dewasa" (tabel penampung aturan hari baik/buruk upacara).
+  Hasil data dirangkai langsung di backend dan langsung dikirim ke user (Bypass LLM).
+
+================================================================================
+RUTE 3: MENGAMBIL GABUNGAN 2 TABEL TERSTRUKTUR (Tanpa Kueri Vektor)
+================================================================================
+* Kategori Pertanyaan:
+  Pencarian weton/watak kelahiran lengkap dari tanggal lahir yang diinput pengguna.
+* Baris Kode Pemicu:
+  - File: chat_context_service.py (Baris 1288-1295) memanggil fungsi pencari konteks tanggal:
+    build_date_database_context(tanggal, intent_name, aspects)
+  - File: chat_context_service.py (Baris 679-684) memilah kueri berdasarkan intent:
+    if intent_name == "karakter_kelahiran":
+        # 1. Kueri tabel kalender_bali
+        # 2. Kueri tabel makna_4aspek
+* Cara Kerja Kueri:
+  1. Backend melakukan kueri pertama ke Tabel 1: "kalender_bali" untuk mengambil
+     suku wuku, pancawara, saptawara, dan lintang pada tanggal lahir tersebut.
+  2. Backend mengambil nama aspek yang didapat, lalu melakukan kueri kedua ke 
+     Tabel 2: "makna_4aspek" untuk menarik teks tafsir kepribadiannya (watak Lintang,
+     Pararasan, Ekajalarsi, dan Pratiti).
+  3. Hasil gabungan 2 tabel terstruktur ini dikirimkan ke LLM sebagai konteks utama.
+
+================================================================================
+RUTE 4: GABUNGAN TABEL TERSTRUKTUR + TABEL EMBEDDING (Hybrid RAG)
+================================================================================
+* Kategori Pertanyaan:
+  Pertanyaan hari/tanggal masehi tertentu yang juga dicocokkan dengan dokumen adat.
+  Contoh: "Apakah hari ini (menyebut tanggal) baik untuk melaksanakan melukat?"
+* Baris Kode Pemicu:
+  - File: chat_context_service.py (Baris 1288-1295) memicu seluruh data sekaligus:
+    return (
+        f"{build_date_database_context(tanggal, intent_name, aspects)}\n\n"
+        f"KONTEKS DEWASA AYU:\n{dewasa_context}\n\n"
+        f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+    )
+* Cara Kerja Kueri:
+  Backend menarik data penanggalan tanggal terkait dari tabel terstruktur "kalender_bali".
+  Kemudian backend juga melakukan pencarian vektor ke tabel embedding "knowledge_chunks"
+  untuk mencari panduan Melukat. Kedua jenis data ini disisipkan bersama agar LLM
+  bisa mengambil keputusan hari baik berdasarkan database kalender dan panduan ritual.
+================================================================================

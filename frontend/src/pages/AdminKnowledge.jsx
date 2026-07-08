@@ -26,6 +26,7 @@ const defaultCategories = [
   "Permata",
   "Lontar",
   "Wariga",
+  "Karakter Kelahiran",
   "Pengetahuan Lain",
 ];
 
@@ -57,6 +58,7 @@ function downloadKnowledgeTemplate() {
     "Permata,,",
     "Lontar,,",
     "Wariga,,",
+    "Karakter Kelahiran,,",
     "Pengetahuan Lain,,",
   ].join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
