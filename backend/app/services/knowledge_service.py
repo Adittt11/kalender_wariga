@@ -17,6 +17,7 @@ KNOWLEDGE_CATEGORIES = (
     "Permata",
     "Lontar",
     "Wariga",
+    "Karakter Kelahiran",
     "Pengetahuan Lain",
 )
 EMBEDDING_DIMENSIONS = 1536

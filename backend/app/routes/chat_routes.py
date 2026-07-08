@@ -208,8 +208,9 @@ def chat(payload: ChatRequest):
                 "success": True,
                 "data": {
                     "answer": (
-                        "Maaf, saya hanya dapat menjawab pertanyaan yang "
-                        "berkaitan dengan kalender Bali dan Wariga."
+                        "Matur suksma. Sebagai asisten Tanya Wariga AI, saya hanya dapat membantu "
+                        "menjawab pertanyaan seputar Kalender Bali dan Wariga. Ada yang bisa saya bantu "
+                        "seputar topik ini?"
                     ),
                     "model": "rule",
                     "intent": intent_info,

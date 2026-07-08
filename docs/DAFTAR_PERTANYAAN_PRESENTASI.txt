@@ -1,0 +1,147 @@
+================================================================================
+DAFTAR PERTANYAAN DEMO CHATBOT WARIGA AI (UNTUK PRESENTASI LENGKAP)
+================================================================================
+
+Dokumen ini berisi kumpulan lengkap skenario pertanyaan demo untuk presentasi,
+diurutkan dari yang termudah (Bypass DB) hingga terkompleks (RAG Hybrid & 
+Context Tracking), lengkap dengan detail alur backend untuk setiap uji coba.
+
+--------------------------------------------------------------------------------
+LEVEL 1: MUDAH (Rule-Based & Direct DB Bypass - 100% Tanpa LLM)
+--------------------------------------------------------------------------------
+Pertanyaan pada level ini tidak memicu panggilan API OpenAI/Groq maupun pencarian 
+vektor. Backend langsung memberikan respon instan dari database lokal. Sangat cepat,
+akurasi 100% dari data mentah, dan hemat biaya token.
+
+Skenario 1.1: Penyaringan Topik di Luar Jangkauan (Out-of-Scope Fallback)
+  *   Tujuan Presentasi: Menunjukkan kecerdasan sistem memblokir pertanyaan tidak relevan.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Bagaimana cara memperbaiki kulkas yang bocor?"
+      - Prompt B: "Siapa penemu lampu bohlam?"
+      - Prompt C: "Tuliskan kode pemrograman Python untuk kalkulator sederhana"
+  *   Alur Backend:
+      Prompt masuk -> Intent Service melabeli "tidak_relevan" -> Backend memeriksa
+      apakah ada kata kunci kebudayaan/kalender Bali -> Hasil = False -> Backend langsung
+      mengembalikan pesan penolakan santun (Bypass LLM utama).
+
+Skenario 1.2: Pencarian Hari Buruk (Dewasa Ala) secara Langsung
+  *   Tujuan Presentasi: Menampilkan list hari buruk upacara dari database tanpa AI.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "dewasa buruk pawiwahan 1900 januari"
+      - Prompt B: "dewasa ala metatah februari 2026"
+      - Prompt C: "hari buruk cukur rambut maret 2026"
+  *   Alur Backend:
+      Prompt masuk -> Mendeteksi intent "dewasa_ayu" + upacara + bulan & tahun + kelayakan 
+      buruk ("ala"/"buruk") -> Bypass LLM diaktifkan -> Query SQL langsung ke tabel "dewasa" 
+      -> Menyaring hanya kelompok "Dewasa Ala" -> Hasil dikirim instan ke user.
+
+Skenario 1.3: Pencarian Hari Baik (Dewasa Ayu) secara Langsung
+  *   Tujuan Presentasi: Menampilkan list hari baik upacara dari database tanpa AI.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "cari hari baik pawiwahan juni 2026"
+      - Prompt B: "hari baik mepandes juli tahun 2026"
+      - Prompt C: "cari dewasa ayu pawintenan september 2026"
+  *   Alur Backend:
+      Prompt masuk -> Mendeteksi intent "dewasa_ayu" + upacara + bulan & tahun + kelayakan 
+      baik -> Bypass LLM diaktifkan -> Query SQL langsung ke tabel "dewasa" -> Menyaring 
+      hanya kelompok "Dewasa Ayu" -> Hasil dikirim instan ke user.
+
+--------------------------------------------------------------------------------
+LEVEL 2: SEDANG (Single-Table Retrieval + LLM / RAG)
+--------------------------------------------------------------------------------
+Pertanyaan pada level ini memerlukan satu kueri ke database/tabel embedding, 
+lahu hasilnya dinarasikan secara luwes oleh LLM dengan persona Budayawan Bali.
+
+Skenario 2.1: Detail Penanggalan Harian (Tabel "kalender_bali")
+  *   Tujuan Presentasi: Menjelaskan wuku, wewaran, sasih, dan piodalan hari tertentu.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Bagaimana detail kalender Bali untuk tanggal 22 Juni 2026?"
+      - Prompt B: "Tolong berikan informasi wuku, wewaran, dan sasih untuk tanggal 17 Agustus 1945"
+      - Prompt C: "Apakah tanggal 25 Desember 2026 bertepatan dengan rahinan atau piodalan suci?"
+  *   Alur Backend:
+      Mengekstrak tanggal -> Melakukan SELECT ke tabel "kalender_bali" untuk baris tanggal 
+      terkait -> Memasukkan data mentah wuku/wewaran/sasih/piodalan ke prompt -> LLM merangkai 
+      jawaban dengan bahasa alami yang sopan dan mengalir.
+
+Skenario 2.2: RAG Semantik - Tanya Pantangan Ingkel (Tabel "knowledge_chunks" - file ingkel.xlsx)
+  *   Tujuan Presentasi: Menunjukkan AI membaca dokumen aturan pantangan ingkel yang diupload admin.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Apa saja pantangan bagi manusia saat siklus Ingkel Wong terjadi?"
+      - Prompt B: "Apa itu Ingkel Taru dan apa yang dilarang dilakukan menurut wariga?"
+      - Prompt C: "Sebutkan semua jenis ingkel yang tercatat dalam dokumen ingkel"
+  *   Alur Backend:
+      Menerjemahkan teks pertanyaan menjadi representasi vektor (Embedding) -> Melakukan 
+      pencarian kemiripan kosinus ke tabel "knowledge_chunks" -> Mengambil dokumen terkait dari
+      sumber file "ingkel.xlsx" -> Dokumen diserahkan ke LLM -> LLM menjawab akurat sesuai file.
+
+Skenario 2.3: RAG Semantik - Tanya Sifat Sasih (Tabel "knowledge_chunks" - file sasih.xlsx)
+  *   Tujuan Presentasi: Menunjukkan AI membaca dokumen karakteristik sasih bulanan.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Bagaimana karakteristik spiritual dari Sasih Kepitu?"
+      - Prompt B: "Mengapa Sasih Kadasa dipandang sangat istimewa menurut tradisi Bali?"
+      - Prompt C: "Apa arti dari istilah Sasih Mala yang sering ditemui di penanggalan?"
+  *   Alur Backend:
+      Mengubah prompt menjadi embedding -> Melakukan pencarian kemiripan teks di tabel 
+      "knowledge_chunks" -> Menemukan potongan teks dari file "sasih.xlsx" -> Dokumen diserahkan
+      ke LLM -> LLM menjelaskan karakter sasih secara komprehensif.
+
+--------------------------------------------------------------------------------
+LEVEL 3: KOMPLEKS (Multi-Table Join, Perhitungan Numerik & Context RAG)
+--------------------------------------------------------------------------------
+Pertanyaan pada level ini melibatkan penggabungan data dari beberapa tabel terstruktur 
+dan tidak terstruktur di backend, serta perhitungan matematika kecocokan sebelum dinarasikan.
+
+Skenario 3.1: Karakter & Watak Kelahiran Lengkap (Tabel "kalender_bali" + "makna_4aspek")
+  *   Tujuan Presentasi: Menampilkan weton lahir, neptu, bintang pelindung, dan tafsir sifatnya.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Saya lahir pada tanggal 12 Mei 1998. Bagaimana ramalan watak kelahiran saya menurut 4 aspek utama?"
+      - Prompt B: "Tolong jelaskan watak orang yang lahir tanggal 1 Januari 2000 berdasarkan Palalintangan dan Pararasan"
+      - Prompt C: "Apa kelemahan watak orang yang lahir pada weton tanggal 22 Juni 2026?"
+  *   Alur Backend:
+      1. Kueri tabel "kalender_bali" untuk mengambil aspek lahir (Wuku, Lintang, Wewaran) pada tanggal tersebut.
+      2. Kueri tabel "makna_4aspek" untuk mengambil arti watak lintang (Palalintangan), watak neptu (Pararasan), watak jalan hidup (Ekajalarsi), dan watak karma (Pratiti).
+      3. Gabungan data watak diserahkan ke LLM -> LLM merangkai narasi kepribadian dengan santun.
+
+Skenario 3.2: Perjodohan & Kecocokan Pasangan (Pertemuan Lanang Istri)
+  *   Tujuan Presentasi: Menunjukkan sistem menghitung kecocokan neptu dua tanggal lahir.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Bagaimana tingkat kecocokan jodoh antara orang lahir tanggal 01-01-1990 (laki-laki) dan 15-05-1992 (perempuan)?"
+      - Prompt B: "Kecocokan lahir pasangan tanggal 20 Oktober 1995 dan 5 November 1997"
+  *   Alur Backend:
+      Mengekstrak 2 tanggal lahir -> Mencari data weton masing-masing di tabel "kalender_bali" 
+      -> Menghitung Urip/Neptu jodoh di backend -> Mengambil tafsir kecocokan berdasarkan 
+      aturan numerik -> Hasil perhitungan diserahkan ke LLM -> LLM memaparkan tingkat kecocokan secara bijak.
+
+Skenario 3.3: Daftar Hari Raya Bulanan (Tabel "kalender_bali")
+  *   Tujuan Presentasi: Menampilkan semua hari raya dan piodalan dalam satu periode bulan.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Daftar rahinan suci, libur nasional, dan piodalan pada bulan Juni 2026"
+      - Prompt B: "Rahinan suci apa saja yang ada pada bulan Januari tahun 1900?"
+  *   Alur Backend:
+      Mengambil semua data harian untuk bulan terkait dari tabel "kalender_bali" -> Menyaring 
+      tanggal-tanggal yang memiliki piodalan/hari raya (bukan tanda "-") -> Mengirimkan list 
+      tersebut ke LLM -> LLM merangkum seluruh daftar tersebut dengan rapi berurutan tanggal.
+
+Skenario 3.4: Kecocokan Hari / Ritual dengan Aturan Adat (Hybrid: Tabel kalender_bali + RAG Semantic)
+  *   Tujuan Presentasi: Menunjukkan AI mengambil data hari tertentu dari tabel database, mencocokkannya dengan aturan ritual dari file Excel/PDF terunggah admin, lalu mengambil keputusan secara logis.
+  *   Daftar Prompt Uji Coba:
+      - Prompt A: "Apakah tanggal 22 Juni 2026 merupakan hari yang baik untuk melaksanakan upacara Melukat?"
+      - Prompt B: "Saya lahir tanggal 12 Mei 1998, apakah menurut dokumen adat saya perlu melakukan upacara Pebayuhan?"
+  *   Alur Backend:
+      1. Sistem mendeteksi tanggal (misal "2026-06-22") -> Menarik data wuku, wewaran, dan ingkel hari itu dari tabel terstruktur "kalender_bali".
+      2. Secara paralel, sistem mengubah kata "Melukat" atau "Pebayuhan" menjadi vektor embedding -> Mencari artikel panduan ritual terkait di tabel embedding "knowledge_chunks".
+      3. Backend menggabungkan data hari dari kalender dan panduan dokumen adat tersebut ke prompt.
+      4. LLM menganalisis secara cerdas: Apakah aspek hari pada tanggal tersebut memenuhi syarat pelaksanaan melukat/pebayuhan yang tertulis di dokumen adat? AI kemudian memberikan keputusan rasional kepada pengguna.
+
+Skenario 3.5: Perintah Modifikasi Lanjutan (Context & Follow-Up Tracking)
+  *   Tujuan Presentasi: Menunjukkan chatbot bisa mengingat percakapan sebelumnya.
+  *   Daftar Prompt Uji Coba (Ketik secara berturut-turut setelah menanyakan watak lahir Skenario 3.1):
+      - Prompt A: "Tolong persingkat penjelasan di atas"
+      - Prompt B: "Ubah penjelasan watak tadi menjadi bentuk satu paragraf saja"
+      - Prompt C: "Tolong jabarkan hanya bagian kelebihan wataknya saja"
+  *   Alur Backend:
+      Prompt masuk -> Intent Service melabeli "tidak_relevan" -> Sistem mendeteksi kata kunci 
+      modifikasi ("persingkat", "paragraf", "jabarkan") -> Sistem melacak riwayat chat dan 
+      menemukan intent terakhir adalah "karakter_kelahiran" -> Sistem memanggil ulang konteks 
+      watak kelahiran lalu menyuruh LLM memodifikasi hasilnya sesuai instruksi baru pengguna.
+================================================================================
