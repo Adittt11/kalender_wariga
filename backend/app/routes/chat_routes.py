@@ -98,17 +98,27 @@ def is_followup_detail_request(value):
         "dalam bentuk paragraf",
         "jabarkan",
         "jabar",
+        "jabarkan lagi",
+        "jabarkan lebih",
         "kembangkan",
         "kembangkan masing",
         "jelaskan masing",
         "uraikan masing",
         "sesuaikan",
         "jelaskan lagi",
+        "jelaskan lebih",
+        "ceritakan lebih",
+        "ceritakan lagi",
         "lanjutkan",
         "lanjut",
         "uraikan",
         "perjelas",
         "buat lebih panjang",
+        "tambahin",
+        "tambahkan detail",
+        "detail lagi",
+        "rinci lagi",
+        "lengkapi",
     )
 
     if any(keyword in normalized for keyword in followup_keywords):
@@ -148,8 +158,10 @@ def is_followup_detail_request(value):
     )
 
 
-def get_previous_user_message(messages):
+def get_previous_user_messages(messages):
+    """Return all previous user messages (excluding the latest one), newest first."""
     seen_latest = False
+    result = []
 
     for message in reversed(messages):
         if message["role"] != "user":
@@ -159,9 +171,9 @@ def get_previous_user_message(messages):
             seen_latest = True
             continue
 
-        return message["content"]
+        result.append(message["content"])
 
-    return ""
+    return result
 
 
 @router.post("")
@@ -172,17 +184,24 @@ def chat(payload: ChatRequest):
         intent_info = classify_chat_intent(latest_user_message)
 
         if intent_info.get("intent") == "tidak_relevan" and is_followup_detail_request(latest_user_message):
-            previous_user_message = get_previous_user_message(messages)
+            # Scan back through all previous user messages to find one with a valid intent
+            for prev_message in get_previous_user_messages(messages):
+                if not prev_message:
+                    continue
 
-            if previous_user_message:
-                previous_intent = classify_chat_intent(previous_user_message)
+                previous_intent = classify_chat_intent(prev_message)
+
+                # Skip if this previous message is also a follow-up (e.g. "simpulkan")
+                if previous_intent.get("intent") == "tidak_relevan" and is_followup_detail_request(prev_message):
+                    continue
 
                 if previous_intent.get("intent") != "tidak_relevan":
                     intent_info = {
                         **previous_intent,
                         "followup_request": latest_user_message,
-                        "followup_from": previous_user_message,
+                        "followup_from": prev_message,
                     }
+                    break
 
         if intent_info.get("intent") == "tidak_relevan" and not is_calendar_question(messages):
             return {
