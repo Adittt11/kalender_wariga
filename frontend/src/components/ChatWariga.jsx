@@ -8,7 +8,7 @@ const initialMessages = [
   {
     role: "assistant",
     content:
-      "Om Swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, dan Lontar.",
+      "Om Swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, karakter kelahiran dan pebayuhan",
   },
 ];
 
@@ -256,8 +256,8 @@ export default function ChatWariga() {
     } catch (err) {
       setError(
         err.response?.data?.detail ||
-          err.message ||
-          "Tanya Wariga AI sedang tidak dapat dihubungi."
+        err.message ||
+        "Tanya Wariga AI sedang tidak dapat dihubungi."
       );
     } finally {
       setLoading(false);
@@ -284,11 +284,10 @@ export default function ChatWariga() {
 
             return (
               <div
-                className={`group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-3 py-2 transition ${
-                  active
+                className={`group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-xl border px-3 py-2 transition ${active
                     ? "border-baliBrown bg-baliCream"
                     : "border-transparent hover:border-baliBorder hover:bg-baliSoft"
-                }`}
+                  }`}
                 key={conversation.id}
               >
                 <button
@@ -348,11 +347,10 @@ export default function ChatWariga() {
           <div className="grid grid-cols-3 gap-2 rounded-2xl bg-baliSoft p-1">
             {chatModelOptions.map((option) => (
               <button
-                className={`rounded-xl px-2 py-2 text-center text-xs font-semibold transition sm:text-sm ${
-                  selectedModel === option.key
+                className={`rounded-xl px-2 py-2 text-center text-xs font-semibold transition sm:text-sm ${selectedModel === option.key
                     ? "bg-white text-baliBrown shadow-sm"
                     : "text-gray-500 hover:bg-white/70 hover:text-baliDark"
-                }`}
+                  }`}
                 disabled={loading}
                 key={option.key}
                 onClick={() => handleModelChange(option.key)}
@@ -382,11 +380,10 @@ export default function ChatWariga() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[84%] whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-7 ${
-                    assistant
+                  className={`max-w-[84%] whitespace-pre-line rounded-2xl px-4 py-3 text-sm leading-7 ${assistant
                       ? "rounded-bl-md border border-baliBorder bg-white text-gray-700"
                       : "rounded-br-md bg-baliBrown text-white"
-                  }`}
+                    }`}
                 >
                   {message.content}
                 </div>
