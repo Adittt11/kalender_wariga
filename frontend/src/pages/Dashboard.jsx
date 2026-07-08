@@ -52,13 +52,33 @@ function normalizeEventText(value) {
   return cleanStr.replace(/\s+/g, " ").trim();
 }
 
-function collectMonthlyEvents(monthData, fields) {
+function normalizeEventParts(value) {
+  const text = normalizeEventText(value);
+
+  if (!text) {
+    return [];
+  }
+
+  return text
+    .split(/\s*\|\s*/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function collectMonthlyEvents(monthData, fieldConfigs) {
   return monthData.reduce((items, row) => {
-    const texts = fields
-      .map((field) => row[field])
-      .filter(hasValue)
-      .map(normalizeEventText)
-      .filter(Boolean);
+    const texts = fieldConfigs.flatMap((config) => {
+      const field = typeof config === "string" ? config : config.field;
+      const label = typeof config === "string" ? "" : config.label;
+
+      if (!hasValue(row[field])) {
+        return [];
+      }
+
+      return normalizeEventParts(row[field]).map((text) => (
+        label ? `${label}: ${text}` : text
+      ));
+    });
 
     if (texts.length) {
       items.push({
@@ -209,9 +229,18 @@ export default function Dashboard() {
 
   const goodTimes = parseGoodTimes(detail?.dawuh);
   const dayInformation = parseDayInformation(detail?.baik_buruk_hari);
-  const hinduEvents = collectMonthlyEvents(monthData, ["status_purnama", "kajengkliwon", "harikeagamaan", "nyepi"]);
-  const nationalEvents = collectMonthlyEvents(monthData, ["harinonbali"]);
-  const piodalanEvents = collectMonthlyEvents(monthData, ["piodalan"]);
+  const hinduEvents = collectMonthlyEvents(monthData, [
+    { field: "status_purnama", label: "Purnama/Tilem" },
+    { field: "kajengkliwon", label: "Kajeng Kliwon" },
+    { field: "harikeagamaan", label: "Hari Keagamaan" },
+    { field: "nyepi", label: "Nyepi" },
+  ]);
+  const nationalEvents = collectMonthlyEvents(monthData, [
+    { field: "harinonbali", label: "Hari Nasional" },
+  ]);
+  const piodalanEvents = collectMonthlyEvents(monthData, [
+    { field: "piodalan", label: "Piodalan" },
+  ]);
 
   return (
     <div className="dashboard-page">

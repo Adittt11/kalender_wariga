@@ -1,11 +1,17 @@
 import json
 import re
 from datetime import datetime, timedelta
+from difflib import get_close_matches
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import text
+
 from app.services.dewasa_ayu_service import MONTHS, get_dewasa_options, search_dewasa
+from app.services.database import engine
 from app.services.kalender_service import get_kalender_by_date, get_kalender_by_month
 from app.services.knowledge_service import build_knowledge_context
+from app.services.pebayuhan_service import get_pebayuhan_by_lahir, get_pebayuhan_by_wewaran
+from app.services.pertemuan_service import calculate_pertemuan_lanang_istri
 
 
 DATE_PATTERN = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
@@ -84,6 +90,8 @@ CALENDAR_KEYWORDS = (
     "penglukatan",
     "melukat",
     "pembayuhan",
+    "pebayuhan",
+    "pebayuah",
     "bayuh",
     "tenung",
     "permata",
@@ -99,11 +107,26 @@ CALENDAR_KEYWORDS = (
     "hari nasional",
     "libur nasional",
     "nasional",
+    "pertemuan",
+    "lanang istri",
+    "laki perempuan",
+    "laki-laki",
+    "perempuan",
+    "suami istri",
+    "pasangan",
+    "jodoh",
+    "kecocokan",
 )
 DEWASA_QUERY_KEYWORDS = (
     "hari baik",
     "hari buruk",
     "hari biasa",
+    "tanggal baik",
+    "tanggal buruk",
+    "tanggal ayu",
+    "tanggal ala",
+    "tanggal cocok",
+    "hari cocok",
     "baik buruk",
     "baik dan buruk",
     "keduanya",
@@ -111,6 +134,22 @@ DEWASA_QUERY_KEYWORDS = (
     "dewasa ayu",
     "ala ayu",
     "ala-ayu",
+    "pawiwahan",
+    "nikah",
+    "nikahan",
+    "pernikahan",
+    "perkawinan",
+    "metatah",
+    "mepandes",
+    "potong gigi",
+    "potong rambut",
+    "cukur rambut",
+    "mepetik",
+    "penyucian diri",
+    "penyucian raga",
+    "pelantikan",
+    "pawintenan",
+    "mawinten",
 )
 DEWASA_GROUP_LABELS = {
     "ayu": "Dewasa Ayu / baik",
@@ -142,6 +181,27 @@ MONTHLY_CALENDAR_FIELDS = {
         "keywords": ("piodalan", "odalan", "piodalan pura", "odalan pura", "odalan-pura"),
     },
 }
+CEREMONY_SYNONYMS = {
+    "pawiwahan": ("nikah", "menikah", "nikahan", "perkawinan", "pernikahan", "kawin"),
+    "metatah": ("potong gigi", "mepandes", "mesangih"),
+    "mepandes": ("potong gigi", "metatah", "mesangih"),
+    "mepetik": ("potong rambut", "cukur rambut", "mecukur", "mepetik rambut"),
+    "nelu bulanin": ("tiga bulanan", "nelubulanin", "bayi tiga bulan"),
+    "melas rare": ("bayi", "anak bayi", "anak kecil", "rare", "upacara bayi"),
+    "rare": ("bayi", "anak bayi", "anak kecil", "melas rare"),
+    "penyucian raga": ("penyucian diri", "bersih diri", "pembersihan diri", "melukat", "penglukatan"),
+    "pasawitrayan": ("pawintenan", "mawinten", "winten", "penyucian rohani"),
+    "madwijati": ("dwijati", "sulinggih", "pedanda", "diksa"),
+    "pelantikan pejabat": ("pelantikan", "dilantik", "jabatan", "pejabat"),
+    "pesamuan desa": ("rapat desa", "paruman desa", "sangkep desa", "pesamuan"),
+    "mekarya perkumpulan": ("membuat perkumpulan", "mendirikan organisasi", "membuat organisasi", "perkumpulan"),
+    "mamula tebu miwah ketimun": ("menanam tebu", "menanam ketimun", "tebu", "ketimun"),
+    "yadnya kawisesan": ("kawisesan", "yadnya khusus"),
+    "salwiring manusa yadnya": ("manusa yadnya", "upacara manusia", "upacara manusa yadnya"),
+    "melukat": ("penglukatan", "lukat", "pembersihan diri"),
+    "penglukatan": ("melukat", "lukat", "pembersihan diri"),
+    "pembayuhan": ("bayuh", "bayuhan", "bayuh oton"),
+}
 
 
 
@@ -154,6 +214,50 @@ def get_latest_user_message(messages):
         ),
         "",
     )
+
+
+def get_previous_user_message(messages):
+    seen_latest = False
+
+    for message in reversed(messages):
+        if message["role"] != "user":
+            continue
+
+        if not seen_latest:
+            seen_latest = True
+            continue
+
+        return message["content"]
+
+    return ""
+
+
+def is_followup_instruction(text_value):
+    normalized = normalize_search_text(text_value)
+
+    if not normalized:
+        return False
+
+    followup_phrases = (
+        "jawab lengkap",
+        "jawab secara lengkap",
+        "jelaskan lengkap",
+        "lebih lengkap",
+        "lengkapkan",
+        "detailkan",
+        "lebih detail",
+        "jelaskan detail",
+        "jawab singkat",
+        "lebih singkat",
+        "ringkas",
+        "lanjut",
+        "lanjutkan",
+        "teruskan",
+        "maksudnya",
+        "jelaskan lagi",
+    )
+
+    return any(phrase in normalized for phrase in followup_phrases)
 
 
 def format_valid_date(year, month, day):
@@ -248,6 +352,29 @@ def resolve_dewasa_ceremony(text_value):
         ):
             return category, ceremony
 
+    for canonical, synonyms in CEREMONY_SYNONYMS.items():
+        if canonical not in normalized_message and not any(
+            synonym in normalized_message for synonym in synonyms
+        ):
+            continue
+
+        for category, ceremony, normalized_ceremony in candidates:
+            if canonical in normalized_ceremony or any(
+                normalize_search_text(synonym) in normalized_ceremony
+                for synonym in synonyms
+            ):
+                return category, ceremony
+
+    candidate_names = [item[2] for item in candidates if item[2]]
+    close_matches = get_close_matches(normalized_message, candidate_names, n=1, cutoff=0.72)
+
+    if close_matches:
+        matched_name = close_matches[0]
+
+        for category, ceremony, normalized_ceremony in candidates:
+            if normalized_ceremony == matched_name:
+                return category, ceremony
+
     return None, None
 
 
@@ -303,13 +430,15 @@ def is_monthly_calendar_question(text_value):
     return bool(resolve_monthly_calendar_field(text_value) and month and year)
 
 
-def build_monthly_calendar_context(query):
-    field_name = resolve_monthly_calendar_field(query)
+def build_monthly_calendar_context(query, month=None, year=None, field_name=None):
+    field_name = field_name or resolve_monthly_calendar_field(query)
 
     if not field_name:
         return None
 
-    month, year = get_month_year_from_text(query)
+    parsed_month, parsed_year = get_month_year_from_text(query)
+    month = month or parsed_month
+    year = year or parsed_year
 
     if not month or not year:
         return (
@@ -374,6 +503,8 @@ def build_monthly_calendar_context(query):
         f"Periode: {period_label}",
         "Gunakan hasil database berikut sebagai sumber utama. "
         "Daftar ini hanya menampilkan tanggal yang memiliki event/hari raya. "
+        "Wajib tampilkan semua item yang ada pada daftar, jangan hanya memberi satu contoh "
+        "dan jangan mengurangi jumlah tanggal kecuali pengguna meminta ringkasan. "
         "Jika suatu tanggal tidak ada dalam daftar di bawah, artinya pada tanggal tersebut "
         "memang TIDAK ADA hari raya atau hari nasional (bukan datanya yang tidak lengkap atau hilang).",
         "",
@@ -389,6 +520,385 @@ def build_monthly_calendar_context(query):
     return "\n".join(lines)
 
 
+def get_intent_value(intent_info, field, fallback=None):
+    if not isinstance(intent_info, dict):
+        return fallback
+
+    value = intent_info.get(field)
+    return value if value not in ("", None, []) else fallback
+
+
+def build_intent_summary(intent_info):
+    if not isinstance(intent_info, dict):
+        return "Intent tidak tersedia; gunakan fallback rule backend."
+
+    serializable = {
+        "intent": intent_info.get("intent"),
+        "date": intent_info.get("date"),
+        "date_lanang": intent_info.get("date_lanang"),
+        "date_istri": intent_info.get("date_istri"),
+        "month": intent_info.get("month"),
+        "year": intent_info.get("year"),
+        "ceremony": intent_info.get("ceremony"),
+        "topic": intent_info.get("topic"),
+        "aspects": intent_info.get("aspects") or [],
+        "requested_fields": intent_info.get("requested_fields") or [],
+        "tables_needed": intent_info.get("tables_needed") or [],
+        "missing_fields": intent_info.get("missing_fields") or [],
+        "confidence": intent_info.get("confidence"),
+    }
+
+    return json.dumps(serializable, ensure_ascii=False)
+
+
+def find_wuku_context(query):
+    normalized = normalize_search_text(query)
+
+    with engine.connect() as conn:
+        rows = conn.execute(
+            text("""
+                SELECT "Wuku", "Keterangan"
+                FROM keterangan_wuku
+                ORDER BY "Wuku"
+            """)
+        ).mappings().all()
+
+    matches = []
+
+    for row in rows:
+        wuku = str(row.get("Wuku") or "").strip()
+
+        if wuku and normalize_search_text(wuku) in normalized:
+            matches.append(dict(row))
+
+    if not matches:
+        return None
+
+    lines = [
+        "KONTEKS MAKNA WUKU:",
+        "Gunakan data dari tabel keterangan_wuku berikut sebagai sumber utama.",
+    ]
+
+    for item in matches:
+        lines.append(f"- Wuku {item['Wuku']}: {item['Keterangan']}")
+
+    return "\n".join(lines)
+
+
+def find_wewaran_context(query):
+    normalized = normalize_search_text(query)
+    matches = []
+
+    with engine.connect() as conn:
+        ps_rows = conn.execute(
+            text("""
+                SELECT pancawara, keterangan_pancawara, saptawara, keterangan_saptawara
+                FROM keterangan_pancawara_saptawara
+            """)
+        ).mappings().all()
+        wariga_rows = conn.execute(
+            text("""
+                SELECT "Nama Wewaran", "Nama hari", "Urip", "Arah_wewaran",
+                       "Dewa_wewaran", "Keterangan"
+                FROM daftar_wariga
+            """)
+        ).mappings().all()
+
+    for row in ps_rows:
+        pancawara = str(row.get("pancawara") or "").strip()
+        saptawara = str(row.get("saptawara") or "").strip()
+
+        if pancawara and normalize_search_text(pancawara) in normalized:
+            matches.append(
+                f"Pancawara {pancawara}: {row.get('keterangan_pancawara') or '-'}"
+            )
+
+        if saptawara and normalize_search_text(saptawara) in normalized:
+            matches.append(
+                f"Saptawara {saptawara}: {row.get('keterangan_saptawara') or '-'}"
+            )
+
+    for row in wariga_rows:
+        nama_hari = str(row.get("Nama hari") or "").strip()
+
+        if nama_hari and normalize_search_text(nama_hari) in normalized:
+            matches.append(
+                " | ".join(
+                    [
+                        f"{row.get('Nama Wewaran') or 'Wewaran'} {nama_hari}",
+                        f"Urip: {row.get('Urip') or '-'}",
+                        f"Arah: {row.get('Arah_wewaran') or '-'}",
+                        f"Dewa: {row.get('Dewa_wewaran') or '-'}",
+                        f"Keterangan: {row.get('Keterangan') or '-'}",
+                    ]
+                )
+            )
+
+    if not matches:
+        return None
+
+    return (
+        "KONTEKS MAKNA WEWARAN:\n"
+        "Gunakan data dari tabel keterangan_pancawara_saptawara dan daftar_wariga berikut.\n"
+        + "\n".join(f"- {item}" for item in matches[:12])
+    )
+
+
+def build_date_database_context(tanggal, intent_name=None, aspects=None):
+    try:
+        datetime.strptime(tanggal, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        return f"Tanggal {tanggal} tidak valid."
+
+    data_bali = get_kalender_by_date(tanggal, aspects=aspects)
+
+    if not data_bali:
+        return (
+            f"Database tidak memiliki data kalender untuk tanggal {tanggal}. "
+            "Sampaikan hal ini dengan jelas dan jangan mengarang detail."
+        )
+
+    source_tables = ["kalender_bali"]
+
+    if intent_name in ("karakter_kelahiran", "makna_wuku", "makna_wewaran"):
+        source_tables.extend(
+            [
+                "makna_4aspek",
+                "keterangan_wuku",
+                "keterangan_pancawara_saptawara",
+            ]
+        )
+
+    context = {
+        "tanggal_diminta": tanggal,
+        "intent": intent_name or "kalender_tanggal",
+        "sumber_tabel": source_tables,
+        "data": data_bali,
+    }
+
+    if intent_name == "karakter_kelahiran":
+        instruction = (
+            "PERTANYAAN KARAKTER KELAHIRAN TERDETEKSI:\n"
+            "Gunakan data kalender_bali yang sudah diperkaya dengan makna_4aspek, "
+            "keterangan_wuku, dan keterangan_pancawara_saptawara. Jelaskan sebagai "
+            "tafsir tradisi, bukan kepastian mutlak."
+        )
+    elif intent_name in ("makna_wuku", "makna_wewaran"):
+        instruction = (
+            "PERTANYAAN MAKNA WARIGA TERDETEKSI:\n"
+            "Gunakan nilai wuku/wewaran pada tanggal tersebut dan jelaskan maknanya "
+            "berdasarkan konteks database."
+        )
+    else:
+        instruction = (
+            "Gunakan data database berikut sebagai sumber utama untuk menjawab "
+            "pertanyaan tentang tanggal tersebut. Jika suatu informasi tidak ada, "
+            "katakan bahwa datanya tidak tersedia. Jangan mengarang."
+        )
+
+    return f"{instruction}\n{json.dumps(context, ensure_ascii=False)}"
+
+
+def safe_build_knowledge_context(query):
+    try:
+        return build_knowledge_context(query)
+    except Exception as error:
+        return (
+            "Knowledge upload tidak dapat diambil saat ini. "
+            f"Alasan teknis: {str(error)}"
+        )
+
+
+def asks_pebayuhan(text_value):
+    normalized = normalize_search_text(text_value)
+
+    return any(
+        keyword in normalized
+        for keyword in (
+            "pembayuhan",
+            "pebayuhan",
+            "pebayuah",
+            "bayuh",
+            "bayuhan",
+        )
+    )
+
+
+def extract_pebayuhan_wewaran(text_value):
+    normalized = normalize_search_text(text_value)
+    saptawara_aliases = {
+        "redite": "Redite",
+        "minggu": "Redite",
+        "soma": "Soma",
+        "senin": "Soma",
+        "anggara": "Anggara",
+        "selasa": "Anggara",
+        "buda": "Buda",
+        "rabu": "Buda",
+        "wraspati": "Wraspati",
+        "wrespati": "Wraspati",
+        "wrhaspati": "Wraspati",
+        "kamis": "Wraspati",
+        "sukra": "Sukra",
+        "jumat": "Sukra",
+        "saniscara": "Saniscara",
+        "sabtu": "Saniscara",
+    }
+    pancawara_aliases = {
+        "umanis": "Umanis",
+        "manis": "Umanis",
+        "paing": "Paing",
+        "pahing": "Paing",
+        "pon": "Pon",
+        "wage": "Wage",
+        "kliwon": "Kliwon",
+    }
+
+    saptawara = next(
+        (
+            canonical
+            for alias, canonical in saptawara_aliases.items()
+            if re.search(rf"\b{re.escape(alias)}\b", normalized)
+        ),
+        None,
+    )
+    pancawara = next(
+        (
+            canonical
+            for alias, canonical in pancawara_aliases.items()
+            if re.search(rf"\b{re.escape(alias)}\b", normalized)
+        ),
+        None,
+    )
+
+    if saptawara and pancawara:
+        return saptawara, pancawara
+
+    return None, None
+
+
+def build_pebayuhan_context(tanggal, query=None):
+    if not tanggal:
+        saptawara, pancawara = extract_pebayuhan_wewaran(query or "")
+
+        if saptawara and pancawara:
+            result = get_pebayuhan_by_wewaran(saptawara, pancawara)
+            return format_pebayuhan_context(result, source_label="Saptawara/Pancawara dari input pengguna")
+
+        return (
+            "PERTANYAAN PEMBAYUHAN/PEBAYUHAN TERDETEKSI:\n"
+            "Tanggal lahir atau kombinasi Saptawara-Pancawara belum ditemukan. "
+            "Minta pengguna menyebutkan tanggal lahir jelas, misalnya 01 Januari 1900, "
+            "atau menyebutkan kombinasi seperti Wrespati Pon."
+        )
+
+    try:
+        result = get_pebayuhan_by_lahir(tanggal)
+    except ValueError as error:
+        return (
+            "PERTANYAAN PEMBAYUHAN/PEBAYUHAN TERDETEKSI:\n"
+            f"{str(error)}. Sampaikan bahwa data pembayuhan/pebayuhan untuk tanggal tersebut "
+            "belum tersedia dan jangan mengambil data pakakalan sebagai pengganti."
+        )
+
+    return format_pebayuhan_context(result, source_label="Saptawara/Pancawara dari kalender_bali")
+
+
+def format_pebayuhan_context(result, source_label):
+    pebayuhan_rows = result.get("pebayuhan") or []
+    lines = [
+        "PERTANYAAN PEMBAYUHAN/PEBAYUHAN TERDETEKSI:",
+        "Pembayuhan dan Pebayuhan pada konteks ini dianggap istilah yang sama.",
+        "Gunakan alur data berikut sebagai sumber utama dan jangan menggantinya dengan pakakalan, dewasa, atau knowledge umum.",
+        f"Sumber kombinasi: {source_label}.",
+        f"Tanggal lahir: {result.get('tanggal_lahir') or '-'}",
+        f"Saptawara: {result.get('saptawara')}",
+        f"Pancawara: {result.get('pancawara')}",
+        "Sumber tabel: pebayuhan.",
+        "",
+        "Hasil tabel pebayuhan untuk Pembayuhan/Pebayuhan:",
+    ]
+
+    if not pebayuhan_rows:
+        lines.append("- Tidak ada data pembayuhan/pebayuhan yang cocok untuk kombinasi Saptawara dan Pancawara tersebut.")
+        return "\n".join(lines)
+
+    for index, item in enumerate(pebayuhan_rows, start=1):
+        lines.extend(
+            [
+                f"{index}. Kombinasi: {item.get('Saptawara') or '-'} - {item.get('Pancawara') or '-'}",
+                f"   Keterangan berdasarkan Saptawara: {item.get('Keterangan') or '-'}",
+                f"   Keterangan berdasarkan Pancawara: {item.get('Keterangan_1') or '-'}",
+                f"   Kweh toya pancoran: {item.get('kweh_toya_pancoran') or '-'}",
+            ]
+        )
+
+    return "\n".join(lines)
+
+
+def build_pertemuan_lanang_istri_context(date_lanang, date_istri):
+    if not date_lanang or not date_istri:
+        missing = []
+
+        if not date_lanang:
+            missing.append("tanggal lahir laki-laki/lanang")
+
+        if not date_istri:
+            missing.append("tanggal lahir perempuan/istri")
+
+        return (
+            "PERTANYAAN PERTEMUAN LANANG ISTRI TERDETEKSI:\n"
+            f"Data belum lengkap: {', '.join(missing)}. "
+            "Minta pengguna mengisi dua tanggal lahir, misalnya: "
+            "laki-laki 02 Januari 1900 dan perempuan 05 Januari 1900."
+        )
+
+    try:
+        result = calculate_pertemuan_lanang_istri(date_lanang, date_istri)
+    except ValueError as error:
+        return (
+            "PERTANYAAN PERTEMUAN LANANG ISTRI TERDETEKSI:\n"
+            f"{str(error)}. Sampaikan dengan jelas dan jangan mengarang hasil."
+        )
+
+    lines = [
+        "PERTANYAAN PERTEMUAN LANANG ISTRI TERDETEKSI:",
+        "Lanang berarti laki-laki dan istri berarti perempuan/pasangan istri.",
+        "Gunakan hasil perhitungan dari fitur Pertemuan Lanang Istri berikut sebagai sumber utama.",
+        "Sumber tabel: kalender_bali dan daftar_wariga.",
+        "",
+        "Data Lanang / Laki-laki:",
+        f"- Tanggal lahir: {result['lanang'].get('tanggal_lahir')}",
+        f"- Wuku: {result['lanang'].get('wuku')}",
+        f"- Saptawara: {result['lanang'].get('saptawara')}",
+        f"- Sadwara: {result['lanang'].get('sadwara')}",
+        f"- Pancawara: {result['lanang'].get('pancawara')}",
+        f"- Total urip: {result['lanang'].get('urip', {}).get('total')}",
+        "",
+        "Data Istri / Perempuan:",
+        f"- Tanggal lahir: {result['istri'].get('tanggal_lahir')}",
+        f"- Wuku: {result['istri'].get('wuku')}",
+        f"- Saptawara: {result['istri'].get('saptawara')}",
+        f"- Sadwara: {result['istri'].get('sadwara')}",
+        f"- Pancawara: {result['istri'].get('pancawara')}",
+        f"- Total urip: {result['istri'].get('urip', {}).get('total')}",
+        "",
+        f"Total urip pasangan: {result.get('total_urip')}",
+        "",
+        "Hasil tenung per umur pernikahan:",
+    ]
+
+    for item in result.get("hasil") or []:
+        lines.append(
+            "- "
+            f"{item.get('umur_pernikahan')}: "
+            f"{item.get('posisi')} - {item.get('artinya')} "
+            f"(perhitungan: {item.get('perhitungan')}, sisa: {item.get('sisa')})"
+        )
+
+    return "\n".join(lines)
+
+
 def merge_dewasa_results(base, addition):
     for key in ("ayu", "dipakai", "ala"):
         base[key].extend(addition.get(key, []))
@@ -396,7 +906,10 @@ def merge_dewasa_results(base, addition):
     return base
 
 
-def search_dewasa_for_period(jenis_yadnya, upacara, month, year):
+def search_dewasa_for_period(jenis_yadnya, upacara, month=None, year=None, tanggal=None):
+    if tanggal:
+        return search_dewasa(jenis_yadnya, upacara, tanggal=tanggal)
+
     if month:
         return search_dewasa(jenis_yadnya, upacara, bulan=month, tahun=year)
 
@@ -415,26 +928,61 @@ def search_dewasa_for_period(jenis_yadnya, upacara, month, year):
     return grouped
 
 
-def build_dewasa_context(query):
-    if not is_dewasa_search_question(query):
+def resolve_dewasa_ceremony_from_hint(ceremony_hint):
+    normalized_hint = normalize_search_text(ceremony_hint)
+
+    if not normalized_hint:
+        return None, None
+
+    options = get_dewasa_options()
+    ceremonies_by_category = options.get("ceremonies_by_category") or {}
+    candidates = []
+
+    for category, ceremonies in ceremonies_by_category.items():
+        for ceremony in ceremonies:
+            candidates.append((category, ceremony, normalize_search_text(ceremony)))
+
+    for category, ceremony, normalized_ceremony in candidates:
+        if normalized_hint == normalized_ceremony or normalized_hint in normalized_ceremony:
+            return category, ceremony
+
+    close_matches = get_close_matches(
+        normalized_hint,
+        [item[2] for item in candidates if item[2]],
+        n=1,
+        cutoff=0.72,
+    )
+
+    if close_matches:
+        for category, ceremony, normalized_ceremony in candidates:
+            if normalized_ceremony == close_matches[0]:
+                return category, ceremony
+
+    return None, None
+
+
+def build_dewasa_context(query, intent_info=None):
+    if not is_dewasa_search_question(query) and get_intent_value(intent_info, "intent") != "dewasa_ayu":
         return None
 
     category, ceremony = resolve_dewasa_ceremony(query)
 
     if not ceremony:
-        return (
-            "PERTANYAAN DEWASA AYU TERDETEKSI:\n"
-            "Nama upacara/kegiatan belum ditemukan pada data Dewasa Ayu. "
-            "Minta pengguna menulis nama upacara yang tersedia di fitur Dewasa Ayu."
+        category, ceremony = resolve_dewasa_ceremony_from_hint(
+            get_intent_value(intent_info, "ceremony", "")
         )
 
+    tanggal = get_intent_value(intent_info, "date") or extract_date_from_text(query)
     month, year = get_month_year_from_text(query)
+    month = month or get_intent_value(intent_info, "month")
+    year = year or get_intent_value(intent_info, "year")
 
-    if not year:
+    if not tanggal and not year:
         return (
             "PERTANYAAN DEWASA AYU TERDETEKSI:\n"
-            "Tahun belum disebutkan. Minta pengguna menyebutkan bulan dan tahun, "
-            "atau tahun saja, misalnya Juni 1900 atau tahun 1900."
+            "Tanggal atau tahun belum disebutkan. Minta pengguna menyebutkan tanggal "
+            "spesifik, bulan dan tahun, atau tahun saja, misalnya 2 Januari 1900, "
+            "Juni 1900, atau tahun 1900."
         )
 
     groups = resolve_dewasa_groups(query)
@@ -442,12 +990,12 @@ def build_dewasa_context(query):
     if not groups:
         groups = ["ayu", "dipakai", "ala"]
 
-    results = search_dewasa_for_period(category, ceremony, month, year)
-    period_label = f"{MONTHS[month - 1]} {year}" if month else f"tahun {year}"
+    results = search_dewasa_for_period(category, ceremony, month, year, tanggal=tanggal)
+    period_label = tanggal or (f"{MONTHS[month - 1]} {year}" if month else f"tahun {year}")
     lines = [
         "PERTANYAAN DEWASA AYU TERDETEKSI:",
-        f"Jenis Yadnya: {category}",
-        f"Upacara/Kegiatan: {ceremony}",
+        f"Jenis Yadnya: {category or 'Semua Yadnya'}",
+        f"Upacara/Kegiatan: {ceremony or 'Semua Upacara'}",
         f"Periode: {period_label}",
         "Gunakan hasil database berikut sebagai sumber utama. "
         "Ayu berarti baik, Ala-Ayu berarti biasa saja/campuran, dan Ala berarti buruk. "
@@ -554,22 +1102,175 @@ def is_calendar_question(messages):
     )
 
 
-def build_chat_database_context(messages, ai_resolved_date=None):
+def build_chat_database_context(messages, ai_resolved_date=None, intent_info=None):
     latest_user_message = get_latest_user_message(messages)
-    tanggal = extract_latest_date(messages, ai_resolved_date)
-    knowledge_context = build_knowledge_context(latest_user_message)
-    dewasa_context = build_dewasa_context(latest_user_message)
-    monthly_calendar_context = build_monthly_calendar_context(latest_user_message)
+    context_query_message = latest_user_message
+
+    if isinstance(intent_info, dict) and intent_info.get("followup_from"):
+        context_query_message = (
+            f"{intent_info.get('followup_from')} "
+            f"{intent_info.get('followup_request') or latest_user_message}"
+        ).strip()
+
+    intent_name = get_intent_value(intent_info, "intent")
+    intent_date = get_intent_value(intent_info, "date")
+    tanggal = intent_date or extract_latest_date(messages, ai_resolved_date)
+    aspects = get_intent_value(intent_info, "aspects", None)
+    knowledge_context = safe_build_knowledge_context(context_query_message)
+    dewasa_context = build_dewasa_context(context_query_message, intent_info=intent_info)
+    monthly_calendar_context = build_monthly_calendar_context(
+        context_query_message,
+        month=get_intent_value(intent_info, "month"),
+        year=get_intent_value(intent_info, "year"),
+    )
+    intent_summary = build_intent_summary(intent_info)
+    pebayuhan_context = (
+        build_pebayuhan_context(tanggal, context_query_message)
+        if intent_name != "pembayuhan" and asks_pebayuhan(context_query_message)
+        else None
+    )
+    pebayuhan_context_block = (
+        "PERTANYAAN GABUNGAN TERDETEKSI:\n"
+        "Pengguna meminta karakter kelahiran dan Pembayuhan/Pebayuhan. "
+        "Jawab kedua bagian tersebut; jangan berhenti hanya pada karakter kelahiran.\n\n"
+        f"KONTEKS PEMBAYUHAN/PEBAYUHAN:\n{pebayuhan_context}\n\n"
+        if pebayuhan_context
+        else ""
+    )
+    combined_monthly_dewasa_notice = (
+        "PERTANYAAN GABUNGAN TERDETEKSI:\n"
+        "Pengguna meminta data kalender bulanan dan Dewasa Ayu sekaligus. "
+        "Jawab kedua bagian tersebut. Data kalender bulanan bersumber dari "
+        "kalender_bali, sedangkan Dewasa Ayu bersumber dari tabel dewasa. "
+        "Jangan menyatakan salah satu data belum tersedia jika konteksnya ada di bawah.\n\n"
+        if monthly_calendar_context and dewasa_context
+        else ""
+    )
+    monthly_calendar_context_block = (
+        f"KONTEKS KALENDER BULANAN:\n{monthly_calendar_context}\n\n"
+        if monthly_calendar_context
+        else ""
+    )
+    dewasa_context_block = (
+        f"KONTEKS DEWASA AYU:\n{dewasa_context}\n\n"
+        if dewasa_context
+        else ""
+    )
+
+    if intent_name == "pembayuhan":
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            f"KONTEKS PEMBAYUHAN/PEBAYUHAN:\n{build_pebayuhan_context(tanggal, context_query_message)}\n\n"
+            "KONTEKS KNOWLEDGE UPLOAD TAMBAHAN:\n"
+            f"{knowledge_context}"
+        )
+
+    if intent_name == "pertemuan_lanang_istri":
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            "KONTEKS PERTEMUAN LANANG ISTRI:\n"
+            f"{build_pertemuan_lanang_istri_context(get_intent_value(intent_info, 'date_lanang'), get_intent_value(intent_info, 'date_istri'))}\n\n"
+            "KONTEKS KNOWLEDGE UPLOAD TAMBAHAN:\n"
+            f"{knowledge_context}"
+        )
+
+    if intent_name in ("penglukatan", "knowledge_umum"):
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            "KONTEKS KNOWLEDGE UPLOAD:\n"
+            f"{knowledge_context}"
+        )
+
+    if intent_name == "hari_raya_bulanan" and monthly_calendar_context:
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            f"{combined_monthly_dewasa_notice}"
+            f"{monthly_calendar_context_block}"
+            f"{dewasa_context_block}"
+            f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+        )
+
+    if intent_name == "tidak_relevan" and monthly_calendar_context:
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            "Intent awal tidak relevan, tetapi parser kalender bulanan menemukan "
+            "permintaan yang valid. Gunakan konteks kalender bulanan berikut sebagai sumber utama.\n\n"
+            f"{combined_monthly_dewasa_notice}"
+            f"{monthly_calendar_context_block}"
+            f"{dewasa_context_block}"
+            f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+        )
+
+    if intent_name == "tidak_relevan" and dewasa_context:
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            "Intent awal tidak relevan, tetapi parser Dewasa Ayu menemukan "
+            "permintaan yang valid. Gunakan konteks Dewasa Ayu berikut sebagai sumber utama.\n\n"
+            f"KONTEKS DEWASA AYU:\n{dewasa_context}\n\n"
+            f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+        )
+
+    if intent_name == "tidak_relevan":
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            "Pertanyaan terdeteksi di luar ruang lingkup kalender Bali dan Wariga. "
+            "Tolak dengan singkat dan arahkan pengguna menanyakan topik Wariga."
+        )
+
+    if intent_name == "dewasa_ayu":
+        return (
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            f"{combined_monthly_dewasa_notice}"
+            f"{monthly_calendar_context_block}"
+            f"KONTEKS DEWASA AYU:\n{dewasa_context or 'Data Dewasa Ayu belum cukup untuk pertanyaan ini.'}\n\n"
+            f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+        )
+
+    if intent_name == "makna_wuku" and not tanggal:
+        wuku_context = find_wuku_context(context_query_message)
+
+        if wuku_context:
+            return (
+                "INTENT SEPARATOR:\n"
+                f"{intent_summary}\n\n"
+                f"{wuku_context}\n\n"
+                f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+            )
+
+    if intent_name == "makna_wewaran" and not tanggal:
+        wewaran_context = find_wewaran_context(context_query_message)
+
+        if wewaran_context:
+            return (
+                "INTENT SEPARATOR:\n"
+                f"{intent_summary}\n\n"
+                f"{wewaran_context}\n\n"
+                f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
+            )
 
     if not tanggal:
         if monthly_calendar_context:
             return (
-                f"KONTEKS KALENDER BULANAN:\n{monthly_calendar_context}\n\n"
+                "INTENT SEPARATOR:\n"
+                f"{intent_summary}\n\n"
+                f"{combined_monthly_dewasa_notice}"
+                f"{monthly_calendar_context_block}"
+                f"{dewasa_context_block}"
                 f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
             )
 
         if dewasa_context:
             return (
+                "INTENT SEPARATOR:\n"
+                f"{intent_summary}\n\n"
                 f"KONTEKS DEWASA AYU:\n{dewasa_context}\n\n"
                 f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
             )
@@ -578,34 +1279,17 @@ def build_chat_database_context(messages, ai_resolved_date=None):
             "Tidak ada tanggal spesifik yang disebutkan pengguna. Jika jawaban "
             "membutuhkan data kalender, minta pengguna menyebutkan tanggal "
             "dengan cara yang jelas, misalnya 22 Juni 2026, besok, atau 22/06/2026.\n\n"
+            "INTENT SEPARATOR:\n"
+            f"{intent_summary}\n\n"
+            f"{pebayuhan_context_block}"
             f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
         )
 
-    try:
-        datetime.strptime(tanggal, "%Y-%m-%d")
-    except ValueError:
-        return f"Tanggal {tanggal} tidak valid."
-
-    data_bali = get_kalender_by_date(tanggal)
-
-    if not data_bali:
-        return (
-            f"Database tidak memiliki data kalender untuk tanggal {tanggal}. "
-            "Sampaikan hal ini dengan jelas dan jangan mengarang detail."
-        )
-
-    context = {
-        "tanggal_diminta": tanggal,
-        "sumber": {
-            "kalender_bali": data_bali,
-        },
-    }
-
     return (
-        "Gunakan data database berikut sebagai sumber utama untuk menjawab "
-        "pertanyaan tentang tanggal tersebut. Jika suatu informasi tidak ada, "
-        "katakan bahwa datanya tidak tersedia. Jangan mengarang.\n"
-        f"{json.dumps(context, ensure_ascii=False)}\n\n"
+        "INTENT SEPARATOR:\n"
+        f"{intent_summary}\n\n"
+        f"{pebayuhan_context_block}"
+        f"{build_date_database_context(tanggal, intent_name, aspects)}\n\n"
         f"KONTEKS DEWASA AYU:\n{dewasa_context or 'Tidak ada pencarian Dewasa Ayu khusus.'}\n\n"
         f"KONTEKS KNOWLEDGE UPLOAD:\n{knowledge_context}"
     )

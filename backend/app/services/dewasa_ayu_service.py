@@ -163,7 +163,7 @@ def get_dewasa_options():
     }
 
 
-def search_dewasa(jenis_yadnya, upacara, tanggal=None, bulan=None, tahun=None):
+def search_dewasa(jenis_yadnya=None, upacara=None, tanggal=None, bulan=None, tahun=None):
     grouped = {
         "ayu": [],
         "dipakai": [],
@@ -208,13 +208,16 @@ def search_dewasa(jenis_yadnya, upacara, tanggal=None, bulan=None, tahun=None):
             continue
 
         for item in dewasa_items:
-            if item.get("jenis_yadnya") != jenis_yadnya or item.get("upacara") != upacara:
+            item_upacara = item.get("upacara")
+            if upacara and item_upacara != upacara:
+                continue
+            if jenis_yadnya and item.get("jenis_yadnya") != jenis_yadnya:
                 continue
 
             rules = item.get("rules_match") or []
 
             for rule in rules:
                 group = get_result_group(rule.get("status"))
-                grouped[group].append(build_result_item(row, rule, upacara))
+                grouped[group].append(build_result_item(row, rule, item_upacara))
 
     return grouped

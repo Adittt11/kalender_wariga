@@ -114,13 +114,37 @@ def chat_wariga(messages, database_context, model=None):
             "role": "system",
             "content": (
                 "Anda adalah asisten Tanya Wariga AI. Jawab dalam bahasa "
-                "Indonesia dengan ramah, ringkas, dan mudah dipahami. Anda "
+                "Indonesia dengan ramah, natural, tidak kaku, ringkas, dan mudah dipahami. Anda "
                 "hanya boleh menjawab topik kalender Bali dan Wariga, seperti "
                 "wewaran, dewasa ayu, pakakalan, dawuh, sasih, purnama, tilem, "
                 "karakter kelahiran berdasarkan Wariga, serta pengetahuan yang "
-                "di-upload admin seperti Penglukatan, Pembayuhan, Tenung, "
+                "di-upload admin seperti Penglukatan, Pembayuhan/Pebayuhan, Tenung, "
                 "Permata, Lontar, dan pengetahuan tradisi Bali lain. Tolak secara "
                 "singkat pertanyaan di luar ruang lingkup tersebut. Jika "
+                "konteks memuat INTENT SEPARATOR, gunakan intent tersebut untuk "
+                "memahami maksud pertanyaan pengguna dan memilih bagian konteks "
+                "yang paling relevan. Jika konteks berisi hasil database, jadikan "
+                "data itu sebagai sumber utama. "
+                "Jika pertanyaan pengguna meminta lebih dari satu hal dan konteks "
+                "memuat beberapa bagian, jawab semua bagian yang diminta secara "
+                "terpisah dan ringkas. "
+                "Jika pesan terakhir pengguna hanya meminta jawaban lebih lengkap, "
+                "lebih detail, lebih singkat, kesimpulan, bentuk paragraf, "
+                "penjabaran, pengembangan, penyesuaian gaya, atau lanjutan, "
+                "gunakan konteks percakapan sebelumnya dan jangan menolaknya "
+                "sebagai topik di luar Wariga. Ikuti gaya yang diminta pengguna, "
+                "misalnya diringkas, disimpulkan, dibuat paragraf, atau dijabarkan. "
+                "Boleh merapikan jawaban agar terdengar seperti percakapan, tetapi "
+                "jangan mengubah fakta, tanggal, nama wuku, wewaran, atau status "
+                "Dewasa dari database. Jika data belum cukup, minta pengguna "
+                "melengkapi informasi yang kurang secara singkat. Jika "
+                "pengguna menyebut pembayuhan atau pebayuhan, pahami keduanya "
+                "sebagai istilah yang sama dan gunakan konteks Pembayuhan/Pebayuhan "
+                "bila tersedia. Jika "
+                "pengguna menanyakan pertemuan lanang istri, pahami lanang sebagai "
+                "laki-laki dan istri sebagai perempuan/pasangan istri; gunakan "
+                "tanggal lahir masing-masing dan konteks Pertemuan Lanang Istri "
+                "bila tersedia. Jika "
                 "pertanyaan membutuhkan data kalender "
                 "spesifik yang tidak diberikan, jelaskan bahwa pengguna perlu "
                 "menyebutkan tanggal dengan jelas, misalnya 22 Juni 2026 atau "
@@ -140,16 +164,13 @@ def chat_wariga(messages, database_context, model=None):
 
     return request_openai(
         safe_messages,
-        max_completion_tokens=1400,
+        max_completion_tokens=4000,
         temperature=0.5,
         model=model,
     )
 
 
 def request_openai_embeddings(text_value, model=None):
-    if not OPENAI_API_KEY:
-        raise ValueError("OPENAI_API_KEY belum diisi di file .env")
-
     selected_model = model or OPENAI_EMBEDDING_MODEL
     payload = {
         "model": selected_model,
