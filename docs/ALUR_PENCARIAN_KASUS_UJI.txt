@@ -1,0 +1,148 @@
+================================================================================
+ALUR DETAIL PENCARIAN DAN KASUS UJI CHATBOT WARIGA AI
+================================================================================
+
+Dokumen ini menjelaskan alur deteksi, kueri database SQL, dan penyusunan data
+di backend untuk 8 kasus uji (pertanyaan demo) spesifik yang Anda ajukan.
+
+--------------------------------------------------------------------------------
+KASUS 1: "Dewasa Ayu Pesamuan Desa di bulan januari 1900 ada apa saja?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "dewasa_ayu"
+   - ceremony: "Pesamuan Desa"
+   - month: 1 (Januari), year: 1900
+2. PROSES FILTRASI (chat_routes.py):
+   - Memicu fungsi bypass LLM "build_dewasa_direct_answer()".
+   - Memicu fungsi penyaring kelompok "resolve_dewasa_groups()" -> Terdeteksi 
+     kata kunci "Dewasa Ayu" -> kelompok disaring hanya = ["ayu"].
+3. KUERI DATABASE (dewasa_ayu_service.py):
+   - SQL query dijalankan ke tabel "dewasa" dengan filter nama upacara 
+     "Pesamuan Desa" dan tanggal berpola "1900-01-%".
+   - Hasil data ditarik secara terstruktur dan disaring hanya untuk kolom "ayu".
+4. OUTPUT AKHIR:
+   - Hasil daftar hari baik langsung dirangkai dan dikirim ke pengguna (Bypass LLM).
+
+--------------------------------------------------------------------------------
+KASUS 2: "Dewasa Ala Pesamuan Desa di bulan januari 1900 ada apa saja?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "dewasa_ayu"
+   - ceremony: "Pesamuan Desa"
+   - month: 1 (Januari), year: 1900
+2. PROSES FILTRASI (chat_routes.py):
+   - Memicu fungsi bypass LLM "build_dewasa_direct_answer()".
+   - Memicu fungsi penyaring kelompok "resolve_dewasa_groups()" -> Terdeteksi 
+     kata kunci "Dewasa Ala" -> kelompok disaring hanya = ["ala"].
+3. KUERI DATABASE (dewasa_ayu_service.py):
+   - SQL query dijalankan ke tabel "dewasa" untuk mencari upacara 
+     "Pesamuan Desa" pada periode "1900-01-%".
+   - Hasil data ditarik secara terstruktur dan disaring hanya untuk kelompok "ala" (hari buruk).
+4. OUTPUT AKHIR:
+   - Hasil daftar hari buruk langsung dirangkai dan dikirim ke pengguna (Bypass LLM).
+
+--------------------------------------------------------------------------------
+KASUS 3: "Dewasa Pesamuan Desa di bulan januari 1900 ada apa saja?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "dewasa_ayu"
+   - ceremony: "Pesamuan Desa"
+   - month: 1 (Januari), year: 1900
+2. PROSES FILTRASI (chat_routes.py):
+   - Memicu fungsi bypass LLM "build_dewasa_direct_answer()".
+   - Memicu fungsi "resolve_dewasa_groups()" -> Tidak mendeteksi kata "ayu" 
+     maupun "ala" secara spesifik, melainkan kata "dewasa" secara umum -> 
+     kelompok diatur ke default = ["ayu", "dipakai", "ala"].
+3. KUERI DATABASE (dewasa_ayu_service.py):
+   - SQL query dijalankan ke tabel "dewasa" untuk upacara "Pesamuan Desa" 
+     di periode "1900-01-%".
+   - Menarik semua data kelayakan hari baik (Ayu), biasa (Dipakai), dan buruk (Ala).
+4. OUTPUT AKHIR:
+   - Semua kelompok dirangkai dalam daftar terstruktur dan dikirim ke pengguna (Bypass LLM).
+
+--------------------------------------------------------------------------------
+KASUS 4: "saya lahir di tanggal 3 maret 1900 apa pebayuhan saya?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "pembayuhan"
+   - date: "1900-03-03"
+2. PROSES RAG (chat_context_service.py):
+   - Tidak masuk bypass karena menanyakan pebayuhan lahir, sistem meneruskan ke RAG LLM.
+   - Pemicu fungsi "build_pebayuhan_context(tanggal='1900-03-03')".
+3. KUERI DATABASE & KNOWLEDGE (pebayuhan_service.py):
+   - Kueri ke tabel "kalender_bali" untuk mencari nama weton (Saptawara & Pancawara)
+     pada tanggal lahir 3 Maret 1900.
+   - Mengambil panduan ritual Pebayuhan dari file Excel/PDF terunggah admin di tabel
+     "knowledge_chunks" (Semantic Search).
+4. PEMROSESAN LLM:
+   - Data weton lahir dan artikel banten pebayuhan digabungkan ke prompt.
+   - LLM OpenAI/Groq merangkai penjelasan syarat banten dan prosesi pebayuhan secara mengalir.
+
+--------------------------------------------------------------------------------
+KASUS 5: "saya lahir di tanggal 5 April 1900 karakter kelahiran saya apa?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "karakter_kelahiran"
+   - date: "1900-04-05"
+2. PROSES RAG (chat_context_service.py):
+   - Sistem memicu "build_date_database_context(tanggal='1900-04-05', intent_name='karakter_kelahiran')".
+3. KUERI DATABASE (chat_context_service.py):
+   - Kueri ke tabel "kalender_bali" untuk mengambil detail hari (Wuku, Lintang, Wewaran).
+   - Kueri ke tabel "makna_4aspek" untuk menerjemahkan arti watak dari Wuku, Lintang,
+     dan Wewaran kelahiran yang didapatkan.
+4. PEMROSESAN LLM:
+   - Kumpulan teks penjelasan watak dari makna_4aspek digabungkan ke prompt.
+   - LLM merangkai cerita ramalan watak kelahiran dengan persona budayawan yang santun.
+
+--------------------------------------------------------------------------------
+KASUS 6: "pria lahir di tanggal 1 januari 1900 dan perempuannya lahir di tanggal 2 januari 1900 bagaimana perjalanan rumah tangga pasangan"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "pertemuan_lanang_istri"
+   - date_lanang: "1900-01-01", date_istri: "1900-01-02"
+2. PROSES RAG (chat_context_service.py):
+   - Sistem memicu "build_pertemuan_lanang_istri_context('1900-01-01', '1900-01-02')".
+3. KUERI DATABASE & PERHITUNGAN (pertemuan_service.py):
+   - Kueri ke tabel "kalender_bali" untuk mengambil data weton lahir pria (1 Jan 1900) 
+     dan wanita (2 Jan 1900).
+   - Backend menghitung neptu/urip masing-masing secara numerik dan menjumlahkannya.
+   - Mengambil teks tafsir kecocokan jodoh Bali berdasarkan jumlah neptu tersebut.
+4. PEMROSESAN LLM:
+   - Hasil perhitungan neptu dan penjelasan ramalan jodoh diserahkan ke LLM.
+   - LLM menerangkan keharmonisan rumah tangga pasangan secara bijak.
+
+--------------------------------------------------------------------------------
+KASUS 7: "saya lahir di tanggal 2 januari 1900 apa karakter kelahiran saya dan pebayuhan saya di tanggal tersebut?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "karakter_kelahiran" (menanyakan watak kelahiran).
+   - date: "1900-01-02".
+2. PROSES RAG GABUNGAN / HYBRID (chat_context_service.py):
+   - Sistem mendeteksi adanya kata kunci "pebayuhan" pada prompt meskipun intent utamanya
+     adalah karakter kelahiran -> Mengaktifkan pemicu "asks_pebayuhan()".
+3. KUERI DATABASE (chat_context_service.py & pebayuhan_service.py):
+   - Kueri watak kelahiran dari tabel "kalender_bali" & "makna_4aspek" untuk tanggal 2 Jan 1900.
+   - Kueri panduan ritual pebayuhan dari tabel "kalender_bali" & "knowledge_chunks" untuk weton 2 Jan 1900.
+   - Kedua blok data digabungkan ke dalam satu prompt konteks LLM.
+4. PEMROSESAN LLM:
+   - LLM merangkum watak lahir terlebih dahulu, lalu disambung dengan penjelasan ritual 
+     pebayuhan oton secara runtut dan lengkap tanpa melewatkan salah satunya.
+
+--------------------------------------------------------------------------------
+KASUS 8: "hari nasional pada bulan februari 1900 itu ada apa saja? dan juga dewasa ayu pawiwahan nya ada apa saja?"
+--------------------------------------------------------------------------------
+1. KLASIFIKASI INTENT (intent_service.py):
+   - intent: "hari_raya_bulanan"
+   - month: 2 (Februari), year: 1900
+2. PROSES RAG GABUNGAN / HYBRID (chat_context_service.py):
+   - Sistem mendeteksi adanya kueri gabungan (Daftar Hari Nasional + Dewasa Ayu Pernikahan).
+3. KUERI DATABASE (chat_context_service.py):
+   - Kueri ke tabel "kalender_bali" untuk mencari semua baris bulan Februari 1900 yang 
+     memiliki kolom hari libur nasional ("harinonbali" tidak kosong).
+   - Kueri ke tabel "dewasa" untuk mengambil tanggal-tanggal bernilai baik ("ayu") 
+     untuk upacara Pernikahan (Pawiwahan) di bulan Februari 1900.
+   - Keduanya digabungkan ke prompt.
+4. PEMROSESAN LLM:
+   - AI disajikan data list hari nasional dan dewasa ayu pernikahan sekaligus.
+   - LLM merangkum kedua topik tersebut dalam respon terpisah yang teratur.
+================================================================================
