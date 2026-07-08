@@ -8,7 +8,7 @@ const initialMessages = [
   {
     role: "assistant",
     content:
-      "Om Swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, Permata, dan Lontar. Untuk detail kalender dari database, sebutkan tanggal secara natural, misalnya 22 Juni 2026, besok, atau 22/06/2026.",
+      "Om Swastyastu. Silakan tanyakan hal seputar kalender Bali, Wariga, wewaran, dewasa ayu, pakakalan, atau knowledge yang sudah di-upload admin seperti Penglukatan, Pembayuhan, Tenung, dan Lontar.",
   },
 ];
 
